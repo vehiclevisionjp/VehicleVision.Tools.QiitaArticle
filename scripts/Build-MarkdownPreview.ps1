@@ -31,7 +31,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$extensionDir = Join-Path $PSScriptRoot '..\tools\VehicleVision.Tools.QiitaArticle.MarkdownPreview'
+$extensionDir = Join-Path $PSScriptRoot '..\extensions\markdown-preview'
 $vsixFile = 'VehicleVision.Tools.QiitaArticle.MarkdownPreview.vsix'
 
 # -InstallOnly: 既存 vsix をそのままインストール
