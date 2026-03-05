@@ -12,7 +12,8 @@
     "Other"
   ],
   "activationEvents": [
-    "workspaceContains:qiita.config.json"
+    "workspaceContains:qiita.config.json",
+    "workspaceContains:public/"
   ],
   "main": "./dist/extension.js",
   "contributes": {
