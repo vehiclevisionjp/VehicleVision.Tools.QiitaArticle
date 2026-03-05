@@ -226,19 +226,25 @@ VS Code の「タスクの実行」（`Ctrl+Shift+P` → `Tasks: Run Task`）か
 ├── extensions/
 │   ├── calendar/          # 記事カレンダー VS Code 拡張（TypeScript ソース）
 │   └── markdown-preview/  # Qiita Markdown プレビュー VS Code 拡張（TypeScript ソース）
-├── scripts/               # 記事管理 PowerShell スクリプト
-│   ├── New-Article.ps1
-│   ├── New-ScheduledArticle.ps1
-│   ├── Sync-ArticleDates.ps1
-│   ├── Add-CreatedAt.ps1
+├── qiita-tools/           # qiita-tools.zip として配布されるファイル一式
+│   ├── .markdownlint-cli2.jsonc
+│   ├── .markdownlint-rules/           # Qiita 固有 Lint ルール（7 ルール）
+│   ├── .prettierrc
+│   ├── package.json                   # Lint / Format 依存パッケージ定義
+│   ├── .vscode/                       # VS Code ワークスペース設定
+│   ├── scripts/                       # 記事管理 PowerShell スクリプト
+│   │   ├── New-Article.ps1
+│   │   ├── New-ScheduledArticle.ps1
+│   │   ├── Sync-ArticleDates.ps1
+│   │   └── Add-CreatedAt.ps1
+│   └── .github/workflows/
+│       ├── push-publish.yml.sample    # 記事自動公開（ユーザー向けサンプル）
+│       └── scheduled-publish.yml.sample # 予約投稿（ユーザー向けサンプル）
+├── scripts/               # 開発用スクリプト
 │   ├── Build-CalendarExtension.ps1    # ローカルビルド用
 │   └── Build-MarkdownPreview.ps1      # ローカルビルド用
-├── .markdownlint-rules/   # Qiita 固有 Lint ルール
 ├── .github/workflows/
-│   ├── release.yml                    # VSIX + ZIP のビルド＆リリース
-│   ├── push-publish.yml.sample        # 記事自動公開（ユーザー向けサンプル）
-│   └── scheduled-publish.yml.sample   # 予約投稿（ユーザー向けサンプル）
-├── .markdownlint-cli2.jsonc
+│   └── release.yml                    # VSIX + ZIP のビルド＆リリース
 ├── .prettierrc
 └── package.json
 ```

@@ -12,9 +12,9 @@ on:
         default: 'patch'
         type: choice
         options:
-          - patch   # 0.0.0 → 0.0.1
-          - minor   # 0.0.0 → 0.1.0
-          - major   # 0.0.0 → 1.0.0
+          - patch # 0.0.0 → 0.0.1
+          - minor # 0.0.0 → 0.1.0
+          - major # 0.0.0 → 1.0.0
 
 permissions:
   contents: write
@@ -64,15 +64,8 @@ jobs:
       # ── lint/ツールファイルを ZIP にまとめる ──────────────
       - name: Package lint tools
         run: |
-          zip -r qiita-tools.zip \
-            .markdownlint-cli2.jsonc \
-            .markdownlint-rules/ \
-            .prettierrc \
-            package.json \
-            .vscode/ \
-            scripts/ \
-            .github/workflows/push-publish.yml.sample \
-            .github/workflows/scheduled-publish.yml.sample
+          cd qiita-tools
+          zip -r ../qiita-tools.zip .
 
       # ── バージョンコミット・タグ作成 ────────────────────────
       - name: Commit version update and create tag
