@@ -219,8 +219,7 @@ VS Code の「タスクの実行」（`Ctrl+Shift+P` → `Tasks: Run Task`）か
 │   └── scheduled-publish.yml.sample   # 予約投稿（ユーザー向けサンプル）
 ├── .markdownlint-cli2.jsonc
 ├── .prettierrc
-├── package.json
-└── qiita.config.json
+└── package.json
 ```
 
 ---
