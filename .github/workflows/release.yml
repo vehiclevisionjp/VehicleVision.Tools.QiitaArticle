@@ -1,13 +1,20 @@
 # リリースワークフロー
-# タグ (v*) を push すると VS Code 拡張 VSIX とツール ZIP を自動ビルドし
-# GitHub Releases に登録します。
-name: Release
+# workflow_dispatch でバージョンをインクリメントし、VS Code 拡張 VSIX とツール ZIP を
+# 自動ビルドして GitHub Releases に登録します。
+name: Create Release
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'バージョンアップの種類'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch # 0.0.0 → 0.0.1
+          - minor # 0.0.0 → 0.1.0
+          - major # 0.0.0 → 1.0.0
 
 permissions:
   contents: write
@@ -15,13 +22,26 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+
+      # ── バージョン取得・計算 ────────────────────────────────
+      - name: Bump version
+        id: new_version
+        run: |
+          npm version ${{ github.event.inputs.version_type }} --no-git-tag-version
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION"
 
       # ── Calendar 拡張のビルド ──────────────────────────────
       - name: Build Calendar extension
@@ -44,25 +64,31 @@ jobs:
       # ── lint/ツールファイルを ZIP にまとめる ──────────────
       - name: Package lint tools
         run: |
-          zip -r qiita-tools.zip \
-            .markdownlint-cli2.jsonc \
-            .markdownlint-rules/ \
-            .prettierrc \
-            package.json \
-            .vscode/ \
-            scripts/ \
-            .github/workflows/push-publish.yml.sample \
-            .github/workflows/scheduled-publish.yml.sample
+          cd qiita-tools
+          zip -r ../qiita-tools.zip .
+
+      # ── バージョンコミット・タグ作成 ────────────────────────
+      - name: Commit version update and create tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          git commit -m "chore: bump version to v${{ steps.new_version.outputs.new_version }}"
+          git tag "v${{ steps.new_version.outputs.new_version }}"
+          git push origin HEAD "v${{ steps.new_version.outputs.new_version }}"
 
       # ── GitHub Release を作成してアセットをアップロード ───
       - name: Create GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          TAG="${GITHUB_REF_NAME:-manual-$(date +%Y%m%d-%H%M%S)}"
-          gh release create "$TAG" \
-            --title "$TAG" \
-            --generate-notes \
-            extensions/calendar/VehicleVision.Tools.QiitaArticle.Calendar.vsix \
-            extensions/markdown-preview/VehicleVision.Tools.QiitaArticle.MarkdownPreview.vsix \
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.new_version.outputs.new_version }}
+          name: v${{ steps.new_version.outputs.new_version }}
+          generate_release_notes: true
+          files: |
+            extensions/calendar/VehicleVision.Tools.QiitaArticle.Calendar.vsix
+            extensions/markdown-preview/VehicleVision.Tools.QiitaArticle.MarkdownPreview.vsix
             qiita-tools.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
