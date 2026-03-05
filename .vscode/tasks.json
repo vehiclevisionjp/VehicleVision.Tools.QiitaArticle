@@ -156,34 +156,6 @@
       "dependsOn": ["npm: install"],
       "problemMatcher": []
     },
-    {
-      "label": "カレンダー拡張: ビルド＆インストール",
-      "type": "shell",
-      "command": ".\\scripts\\Build-CalendarExtension.ps1",
-      "group": "none",
-      "problemMatcher": []
-    },
-    {
-      "label": "カレンダー拡張: インストール",
-      "type": "shell",
-      "command": ".\\scripts\\Build-CalendarExtension.ps1 -InstallOnly",
-      "group": "none",
-      "problemMatcher": []
-    },
-    {
-      "label": "MD プレビュー拡張: ビルド＆インストール",
-      "type": "shell",
-      "command": ".\\scripts\\Build-MarkdownPreview.ps1",
-      "group": "none",
-      "problemMatcher": []
-    },
-    {
-      "label": "MD プレビュー拡張: インストール",
-      "type": "shell",
-      "command": ".\\scripts\\Build-MarkdownPreview.ps1 -InstallOnly",
-      "group": "none",
-      "problemMatcher": []
-    }
   ],
   "inputs": [
     {

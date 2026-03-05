@@ -1,0 +1,68 @@
+# リリースワークフロー
+# タグ (v*) を push すると VS Code 拡張 VSIX とツール ZIP を自動ビルドし
+# GitHub Releases に登録します。
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ── Calendar 拡張のビルド ──────────────────────────────
+      - name: Build Calendar extension
+        working-directory: extensions/calendar
+        run: |
+          npm install
+          npm run build
+          npx --yes @vscode/vsce package --no-dependencies --allow-missing-repository \
+            -o VehicleVision.Tools.QiitaArticle.Calendar.vsix
+
+      # ── MarkdownPreview 拡張のビルド ──────────────────────
+      - name: Build MarkdownPreview extension
+        working-directory: extensions/markdown-preview
+        run: |
+          npm install
+          npm run build
+          npx --yes @vscode/vsce package --no-dependencies --allow-missing-repository \
+            -o VehicleVision.Tools.QiitaArticle.MarkdownPreview.vsix
+
+      # ── lint/ツールファイルを ZIP にまとめる ──────────────
+      - name: Package lint tools
+        run: |
+          zip -r qiita-tools.zip \
+            .markdownlint-cli2.jsonc \
+            .markdownlint-rules/ \
+            .prettierrc \
+            package.json \
+            .vscode/ \
+            scripts/ \
+            .github/workflows/push-publish.yml.sample \
+            .github/workflows/scheduled-publish.yml.sample
+
+      # ── GitHub Release を作成してアセットをアップロード ───
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF_NAME:-manual-$(date +%Y%m%d-%H%M%S)}"
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --generate-notes \
+            extensions/calendar/VehicleVision.Tools.QiitaArticle.Calendar.vsix \
+            extensions/markdown-preview/VehicleVision.Tools.QiitaArticle.MarkdownPreview.vsix \
+            qiita-tools.zip
