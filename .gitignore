@@ -1,0 +1,23 @@
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Editor / IDE
+*.swp
+*.swo
+*~
+
+# Node.js
+node_modules/
+npm-debug.log*
+
+# Qiita CLI
+.remote
+
+# Tools: ビルド生成物
+tools/**/bin/
+tools/**/obj/
+tools/**/dist/
+tools/**/node_modules/
+tools/**/package-lock.json

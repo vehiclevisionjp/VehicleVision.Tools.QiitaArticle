@@ -1,0 +1,33 @@
+{
+  "name": "vehiclevision-tools-qiitaarticle-markdownpreview",
+  "displayName": "Qiita Markdown Preview",
+  "license": "AGPL-3.0-only",
+  "description": "VS Code の Markdown プレビューを Qiita 固有の構文（:::note, lang:filename, 数式等）に対応させる拡張機能",
+  "version": "2026.305.950",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "markdown.markdownItPlugins": true,
+    "markdown.previewStyles": [
+      "./media/qiita-markdown.css"
+    ]
+  },
+  "scripts": {
+    "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
+    "watch": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap --watch",
+    "package": "npx @vscode/vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.3.0"
+  }
+}

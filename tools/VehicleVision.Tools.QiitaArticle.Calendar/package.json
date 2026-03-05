@@ -1,0 +1,49 @@
+{
+  "name": "vehiclevision-tools-qiitaarticle-calendar",
+  "displayName": "Qiita 記事カレンダー",
+  "description": "Qiita 記事の投稿スケジュールをカレンダー形式で管理する VS Code 拡張機能",
+  "license": "AGPL-3.0-only",
+  "version": "2026.305.954",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "workspaceContains:qiita.config.json"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "articleCalendar.open",
+        "title": "記事カレンダーを開く",
+        "category": "Qiita"
+      }
+    ],
+    "configuration": {
+      "title": "Qiita 記事カレンダー",
+      "properties": {
+        "articleCalendar.autoOpen": {
+          "type": "boolean",
+          "default": true,
+          "description": "ワークスペースを開いたときに自動的にカレンダーを表示する"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
+    "watch": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap --watch",
+    "package": "npx @vscode/vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/codicons": "^0.0.44",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.3.0"
+  }
+}

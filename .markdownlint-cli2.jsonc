@@ -1,0 +1,34 @@
+// markdownlint-cli2 configuration
+// https://github.com/DavidAnson/markdownlint-cli2
+{
+  // Qiita pull で取得したリモートコピーは Lint 対象外
+  "ignores": ["public/.remote/**"],
+
+  "config": {
+    // 行の長さ制限を無効化（記事本文は長くなりがち）
+    "MD013": false,
+    // インラインHTMLを許可（Qiita記事でHTML使用あり）
+    "MD033": false,
+    // 最初の行が見出しでなくてもOK（Front Matterがあるため）
+    "MD041": false,
+    // 同名見出しの重複を許可（バージョン別セクション等で自然な繰り返しがあるため）
+    "MD024": false,
+    // テーブルのスタイルチェックを無効化（日本語混在で列幅の一致が困難なため）
+    "MD060": false,
+    // 裸のURLを許可（Qiitaのリンクカード機能を使用するため）
+    "MD034": false
+  },
+
+  // カスタムルール（Qiita 固有記法の検証）
+  // 仕様ソース: resources/qiita-markdown (https://github.com/increments/qiita-markdown)
+  // ※ 各ルールは内部で public/ 配下のファイルのみを検証対象としている
+  "customRules": [
+    ".markdownlint-rules/qiita-front-matter.js",
+    ".markdownlint-rules/qiita-note-block.js",
+    ".markdownlint-rules/qiita-code-block.js",
+    ".markdownlint-rules/qiita-math-block.js",
+    ".markdownlint-rules/qiita-details-summary.js",
+    ".markdownlint-rules/qiita-embed.js",
+    ".markdownlint-rules/qiita-inline-math.js"
+  ]
+}
