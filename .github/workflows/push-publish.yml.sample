@@ -76,7 +76,7 @@ jobs:
             echo "message=" >> $GITHUB_OUTPUT
             exit 0
           fi
-          MESSAGE="[info][title]Qiita記事が投稿されました[/title]"
+          MESSAGE="📝 Qiita記事が投稿されました\n\n"
           while IFS= read -r file; do
             [ -f "$file" ] || continue
             if grep -q 'ignorePublish: true' "$file"; then
@@ -88,7 +88,6 @@ jobs:
               MESSAGE="${MESSAGE}▶ ${ARTICLE_TITLE}\nhttps://qiita.com/items/${ARTICLE_ID}\n\n"
             fi
           done < <(echo "$CHANGED_FILES")
-          MESSAGE="${MESSAGE}[/info]"
           if [[ "$MESSAGE" == *"qiita.com"* ]]; then
             echo "message<<EOF" >> $GITHUB_OUTPUT
             echo -e "$MESSAGE" >> $GITHUB_OUTPUT
@@ -97,27 +96,64 @@ jobs:
             echo "message=" >> $GITHUB_OUTPUT
           fi
 
-      - name: Notify Chatwork
-        if: steps.articles.outputs.message != ''
-        env:
-          CHATWORK_API_TOKEN: ${{ secrets.CHATWORK_API_TOKEN }}
-          CHATWORK_ROOM_ID: ${{ secrets.CHATWORK_ROOM_ID }}
-        run: |
-          curl -X POST "https://api.chatwork.com/v2/rooms/${CHATWORK_ROOM_ID}/messages" \
-            -H "X-ChatWorkToken: ${CHATWORK_API_TOKEN}" \
-            --data-urlencode "body=${{ steps.articles.outputs.message }}"
-
-      - name: Notify Chatwork on failure
-        if: failure()
-        env:
-          CHATWORK_API_TOKEN: ${{ secrets.CHATWORK_API_TOKEN }}
-          CHATWORK_ROOM_ID: ${{ secrets.CHATWORK_ROOM_ID }}
-        run: |
-          MESSAGE="[info][title]Qiita記事の投稿に失敗しました[/title]"
-          MESSAGE="${MESSAGE}ワークフロー: ${{ github.workflow }}\n"
-          MESSAGE="${MESSAGE}ブランチ: ${{ github.ref_name }}\n"
-          MESSAGE="${MESSAGE}コミット: ${{ github.sha }}\n\n"
-          MESSAGE="${MESSAGE}詳細: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}[/info]"
-          curl -X POST "https://api.chatwork.com/v2/rooms/${CHATWORK_ROOM_ID}/messages" \
-            -H "X-ChatWorkToken: ${CHATWORK_API_TOKEN}" \
-            --data-urlencode "body=$(echo -e "$MESSAGE")"
+      # ── 通知（任意） ──────────────────────────────────────
+      # 必要に応じていずれかのコメントを外し、対応する Secret を設定してください。
+      #
+      # --- Chatwork ---
+      # - name: Notify Chatwork
+      #   if: steps.articles.outputs.message != ''
+      #   env:
+      #     CHATWORK_API_TOKEN: ${{ secrets.CHATWORK_API_TOKEN }}
+      #     CHATWORK_ROOM_ID: ${{ secrets.CHATWORK_ROOM_ID }}
+      #   run: |
+      #     curl -X POST "https://api.chatwork.com/v2/rooms/${CHATWORK_ROOM_ID}/messages" \
+      #       -H "X-ChatWorkToken: ${CHATWORK_API_TOKEN}" \
+      #       --data-urlencode "body=${{ steps.articles.outputs.message }}"
+      #
+      # --- Slack (Incoming Webhook) ---
+      # - name: Notify Slack
+      #   if: steps.articles.outputs.message != ''
+      #   env:
+      #     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      #   run: |
+      #     curl -X POST "$SLACK_WEBHOOK_URL" \
+      #       -H "Content-Type: application/json" \
+      #       -d "{\"text\": \"${{ steps.articles.outputs.message }}\"}"
+      #
+      # --- Discord (Webhook) ---
+      # - name: Notify Discord
+      #   if: steps.articles.outputs.message != ''
+      #   env:
+      #     DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      #   run: |
+      #     curl -X POST "$DISCORD_WEBHOOK_URL" \
+      #       -H "Content-Type: application/json" \
+      #       -d "{\"content\": \"${{ steps.articles.outputs.message }}\"}"
+      #
+      # --- Microsoft Teams (Incoming Webhook) ---
+      # - name: Notify Teams
+      #   if: steps.articles.outputs.message != ''
+      #   env:
+      #     TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+      #   run: |
+      #     curl -X POST "$TEAMS_WEBHOOK_URL" \
+      #       -H "Content-Type: application/json" \
+      #       -d "{\"text\": \"${{ steps.articles.outputs.message }}\"}"
+      #
+      # ── エラー通知（任意） ────────────────────────────────
+      # 上記と同じサービスで failure() 時の通知も追加できます。
+      # 例（Slack）:
+      #
+      # - name: Notify on failure
+      #   if: failure()
+      #   env:
+      #     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      #   run: |
+      #     MESSAGE="❌ Qiita記事の投稿に失敗しました"
+      #     MESSAGE="${MESSAGE}\nワークフロー: ${{ github.workflow }}"
+      #     MESSAGE="${MESSAGE}\nブランチ: ${{ github.ref_name }}"
+      #     MESSAGE="${MESSAGE}\nコミット: ${{ github.sha }}"
+      #     MESSAGE="${MESSAGE}\n詳細: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      #     curl -X POST "$SLACK_WEBHOOK_URL" \
+      #       -H "Content-Type: application/json" \
+      #       -d "{\"text\": \"$(echo -e "$MESSAGE")\"}"

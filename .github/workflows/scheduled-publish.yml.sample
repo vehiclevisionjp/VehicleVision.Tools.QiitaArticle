@@ -132,7 +132,7 @@ jobs:
               fi
             fi
           done < <(find public -name '*.md' -not -path 'public/.remote/*')
-          MESSAGE="[info][title]Qiita 予約投稿レポート ($TODAY)[/title]"
+          MESSAGE="📝 Qiita 予約投稿レポート ($TODAY)\n\n"
           if [ -n "$PUBLISHED" ]; then
             MESSAGE="${MESSAGE}【本日投稿】\n${PUBLISHED}\n"
           else
@@ -143,30 +143,63 @@ jobs:
           else
             MESSAGE="${MESSAGE}【今後の予定】\n予約投稿の予定はありません"
           fi
-          MESSAGE="${MESSAGE}[/info]"
           echo "message<<EOF" >> $GITHUB_OUTPUT
           echo -e "$MESSAGE" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Notify Chatwork
-        env:
-          CHATWORK_API_TOKEN: ${{ secrets.CHATWORK_API_TOKEN }}
-          CHATWORK_ROOM_ID: ${{ secrets.CHATWORK_ROOM_ID }}
-        run: |
-          curl -X POST "https://api.chatwork.com/v2/rooms/${CHATWORK_ROOM_ID}/messages" \
-            -H "X-ChatWorkToken: ${CHATWORK_API_TOKEN}" \
-            --data-urlencode "body=${{ steps.articles.outputs.message }}"
-
-      - name: Notify Chatwork on failure
-        if: failure()
-        env:
-          CHATWORK_API_TOKEN: ${{ secrets.CHATWORK_API_TOKEN }}
-          CHATWORK_ROOM_ID: ${{ secrets.CHATWORK_ROOM_ID }}
-        run: |
-          MESSAGE="[info][title]予約投稿の処理に失敗しました[/title]"
-          MESSAGE="${MESSAGE}ワークフロー: ${{ github.workflow }}\n"
-          MESSAGE="${MESSAGE}実行日時: $(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M:%S')\n\n"
-          MESSAGE="${MESSAGE}詳細: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}[/info]"
-          curl -X POST "https://api.chatwork.com/v2/rooms/${CHATWORK_ROOM_ID}/messages" \
-            -H "X-ChatWorkToken: ${CHATWORK_API_TOKEN}" \
-            --data-urlencode "body=$(echo -e "$MESSAGE")"
+      # ── 通知（任意） ──────────────────────────────────────
+      # 必要に応じていずれかのコメントを外し、対応する Secret を設定してください。
+      #
+      # --- Chatwork ---
+      # - name: Notify Chatwork
+      #   env:
+      #     CHATWORK_API_TOKEN: ${{ secrets.CHATWORK_API_TOKEN }}
+      #     CHATWORK_ROOM_ID: ${{ secrets.CHATWORK_ROOM_ID }}
+      #   run: |
+      #     curl -X POST "https://api.chatwork.com/v2/rooms/${CHATWORK_ROOM_ID}/messages" \
+      #       -H "X-ChatWorkToken: ${CHATWORK_API_TOKEN}" \
+      #       --data-urlencode "body=${{ steps.articles.outputs.message }}"
+      #
+      # --- Slack (Incoming Webhook) ---
+      # - name: Notify Slack
+      #   env:
+      #     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      #   run: |
+      #     curl -X POST "$SLACK_WEBHOOK_URL" \
+      #       -H "Content-Type: application/json" \
+      #       -d "{\"text\": \"${{ steps.articles.outputs.message }}\"}"
+      #
+      # --- Discord (Webhook) ---
+      # - name: Notify Discord
+      #   env:
+      #     DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      #   run: |
+      #     curl -X POST "$DISCORD_WEBHOOK_URL" \
+      #       -H "Content-Type: application/json" \
+      #       -d "{\"content\": \"${{ steps.articles.outputs.message }}\"}"
+      #
+      # --- Microsoft Teams (Incoming Webhook) ---
+      # - name: Notify Teams
+      #   env:
+      #     TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+      #   run: |
+      #     curl -X POST "$TEAMS_WEBHOOK_URL" \
+      #       -H "Content-Type: application/json" \
+      #       -d "{\"text\": \"${{ steps.articles.outputs.message }}\"}"
+      #
+      # ── エラー通知（任意） ────────────────────────────────
+      # 上記と同じサービスで failure() 時の通知も追加できます。
+      # 例（Slack）:
+      #
+      # - name: Notify on failure
+      #   if: failure()
+      #   env:
+      #     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      #   run: |
+      #     MESSAGE="❌ 予約投稿の処理に失敗しました"
+      #     MESSAGE="${MESSAGE}\nワークフロー: ${{ github.workflow }}"
+      #     MESSAGE="${MESSAGE}\n実行日時: $(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M:%S')"
+      #     MESSAGE="${MESSAGE}\n詳細: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      #     curl -X POST "$SLACK_WEBHOOK_URL" \
+      #       -H "Content-Type: application/json" \
+      #       -d "{\"text\": \"$(echo -e "$MESSAGE")\"}"
