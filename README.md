@@ -28,6 +28,9 @@ VS Code で Qiita 記事を楽に管理するための**追加ツールキット
 [Releases ページ](../../releases/latest) から最新の `.vsix` ファイルをダウンロードし、VS Code にインストールします。
 
 ```bash
+# 最新リリースから VSIX をダウンロード
+gh release download --repo vehiclevisionjp/VehicleVision.Tools.QiitaArticle --pattern "*.vsix"
+
 # カレンダー拡張
 code --install-extension VehicleVision.Tools.QiitaArticle.Calendar.vsix
 
@@ -43,6 +46,9 @@ code --install-extension VehicleVision.Tools.QiitaArticle.MarkdownPreview.vsix
 **Qiita 記事リポジトリのルートに展開**します。
 
 ```bash
+# 最新リリースから qiita-tools.zip をダウンロード
+gh release download --repo vehiclevisionjp/VehicleVision.Tools.QiitaArticle --pattern "qiita-tools.zip"
+
 # 記事リポジトリのルートで展開
 unzip qiita-tools.zip -d .
 ```
