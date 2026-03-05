@@ -1,0 +1,101 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "npm: install（ルート）",
+      "type": "shell",
+      "command": "npm install",
+      "group": "none",
+      "problemMatcher": []
+    },
+    {
+      "label": "npm: install（Calendar 拡張機能）",
+      "type": "shell",
+      "command": "npm install",
+      "options": { "cwd": "${workspaceFolder}/extensions/calendar" },
+      "group": "none",
+      "problemMatcher": []
+    },
+    {
+      "label": "npm: install（MarkdownPreview 拡張機能）",
+      "type": "shell",
+      "command": "npm install",
+      "options": { "cwd": "${workspaceFolder}/extensions/markdown-preview" },
+      "group": "none",
+      "problemMatcher": []
+    },
+    {
+      "label": "npm: install（全プロジェクト）",
+      "dependsOn": [
+        "npm: install（ルート）",
+        "npm: install（Calendar 拡張機能）",
+        "npm: install（MarkdownPreview 拡張機能）"
+      ],
+      "dependsOrder": "parallel",
+      "group": "none",
+      "problemMatcher": []
+    },
+    {
+      "label": "Build: Calendar 拡張機能",
+      "type": "shell",
+      "command": "pwsh -NoProfile -File ./scripts/Build-CalendarExtension.ps1",
+      "group": "build",
+      "dependsOn": ["npm: install（Calendar 拡張機能）"],
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "Build: MarkdownPreview 拡張機能",
+      "type": "shell",
+      "command": "pwsh -NoProfile -File ./scripts/Build-MarkdownPreview.ps1",
+      "group": "build",
+      "dependsOn": ["npm: install（MarkdownPreview 拡張機能）"],
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "Build: 全拡張機能",
+      "dependsOn": [
+        "Build: Calendar 拡張機能",
+        "Build: MarkdownPreview 拡張機能"
+      ],
+      "dependsOrder": "parallel",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Watch: Calendar 拡張機能",
+      "type": "shell",
+      "command": "npm run watch",
+      "options": { "cwd": "${workspaceFolder}/extensions/calendar" },
+      "isBackground": true,
+      "group": "build",
+      "dependsOn": ["npm: install（Calendar 拡張機能）"],
+      "problemMatcher": "$tsc-watch"
+    },
+    {
+      "label": "Watch: MarkdownPreview 拡張機能",
+      "type": "shell",
+      "command": "npm run watch",
+      "options": { "cwd": "${workspaceFolder}/extensions/markdown-preview" },
+      "isBackground": true,
+      "group": "build",
+      "dependsOn": ["npm: install（MarkdownPreview 拡張機能）"],
+      "problemMatcher": "$tsc-watch"
+    },
+    {
+      "label": "Format: Prettier チェック",
+      "type": "npm",
+      "script": "format:check",
+      "group": "test",
+      "dependsOn": ["npm: install（ルート）"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Format: Prettier 実行",
+      "type": "npm",
+      "script": "format",
+      "group": "test",
+      "dependsOn": ["npm: install（ルート）"],
+      "problemMatcher": []
+    }
+  ]
+}
