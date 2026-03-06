@@ -79,7 +79,9 @@ jobs:
 
           # Backup public/ for retry/rollback
           rm -rf /tmp/public_backup
-          cp -r public/ /tmp/public_backup/
+          if [ -d public ]; then
+            cp -r public/ /tmp/public_backup/
+          fi
 
           git commit -m "Enable scheduled articles [skip ci]"
 
@@ -96,9 +98,10 @@ jobs:
               exit 1
             fi
 
-            # Rollback: reset, pull latest, restore from backup
+            # Rollback: reset, fetch latest, restore from backup
             git reset --hard HEAD~1
-            git pull origin "$BRANCH"
+            git fetch origin "$BRANCH"
+            git reset --hard "origin/$BRANCH"
             if [ -d /tmp/public_backup ]; then
               cp -r /tmp/public_backup/* public/ 2>/dev/null || true
             fi
@@ -133,7 +136,9 @@ jobs:
 
           # Backup public/ for retry/rollback
           rm -rf /tmp/public_backup
-          cp -r public/ /tmp/public_backup/
+          if [ -d public ]; then
+            cp -r public/ /tmp/public_backup/
+          fi
 
           git commit -m "Publish articles via qiita-cli"
 
@@ -151,7 +156,8 @@ jobs:
             fi
 
             git reset --hard HEAD~1
-            git pull origin "$BRANCH"
+            git fetch origin "$BRANCH"
+            git reset --hard "origin/$BRANCH"
             if [ -d /tmp/public_backup ]; then
               cp -r /tmp/public_backup/* public/ 2>/dev/null || true
             fi
@@ -205,7 +211,9 @@ jobs:
 
             # Backup public/ for retry/rollback
             rm -rf /tmp/public_backup
-            cp -r public/ /tmp/public_backup/
+            if [ -d public ]; then
+              cp -r public/ /tmp/public_backup/
+            fi
 
             git commit -m "Add created_at to Front Matter [skip ci]"
 
@@ -223,7 +231,8 @@ jobs:
               fi
 
               git reset --hard HEAD~1
-              git pull origin "$BRANCH"
+              git fetch origin "$BRANCH"
+              git reset --hard "origin/$BRANCH"
               if [ -d /tmp/public_backup ]; then
                 cp -r /tmp/public_backup/* public/ 2>/dev/null || true
               fi
