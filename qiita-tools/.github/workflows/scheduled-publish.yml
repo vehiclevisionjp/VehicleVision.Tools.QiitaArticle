@@ -63,14 +63,74 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
           git diff --cached --quiet || git commit -m "Enable scheduled articles [skip ci]"
-          git push
+          MAX_ATTEMPTS=3
+          ATTEMPT=0
+          while ! git push; do
+            ATTEMPT=$((ATTEMPT + 1))
+            if [ "$ATTEMPT" -ge "$MAX_ATTEMPTS" ]; then
+              echo "::error::Push failed after $MAX_ATTEMPTS attempts"
+              exit 1
+            fi
+            echo "::warning::Push failed (attempt $ATTEMPT/$MAX_ATTEMPTS). Pulling and retrying with YAML restoration..."
+            BACKUP=$(mktemp -d)
+            cp -a public/. "$BACKUP/"
+            git reset --hard HEAD~1
+            git pull
+            cp -a "$BACKUP/." public/
+            rm -rf "$BACKUP"
+            git add -A
+            if git diff --staged --exit-code --quiet; then
+              echo "No changes remaining after pull"
+              break
+            fi
+            git commit -m "Enable scheduled articles [skip ci]"
+          done
 
-      - name: Publish articles
+      - uses: actions/setup-node@v4
         if: steps.check.outputs.changed == 'true'
-        uses: increments/qiita-cli/actions/publish@v1
         with:
-          qiita-token: ${{ secrets.QIITA_TOKEN }}
-          root: "."
+          node-version: "20"
+      - name: Install qiita-cli
+        if: steps.check.outputs.changed == 'true'
+        run: npm install -g @qiita/qiita-cli@v1.8.0
+      - name: Publish articles to Qiita
+        if: steps.check.outputs.changed == 'true'
+        env:
+          QIITA_TOKEN: ${{ secrets.QIITA_TOKEN }}
+        run: qiita publish --all --root .
+      - name: Commit and push published changes
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          git add public/*
+          if git diff --staged --exit-code --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git commit -m "Updated by qiita-cli"
+          MAX_ATTEMPTS=3
+          ATTEMPT=0
+          while ! git push; do
+            ATTEMPT=$((ATTEMPT + 1))
+            if [ "$ATTEMPT" -ge "$MAX_ATTEMPTS" ]; then
+              echo "::error::Push failed after $MAX_ATTEMPTS attempts"
+              exit 1
+            fi
+            echo "::warning::Push failed (attempt $ATTEMPT/$MAX_ATTEMPTS). Pulling and retrying with YAML restoration..."
+            BACKUP=$(mktemp -d)
+            cp -a public/. "$BACKUP/"
+            git reset --hard HEAD~1
+            git pull
+            cp -a "$BACKUP/." public/
+            rm -rf "$BACKUP"
+            git add public/*
+            if git diff --staged --exit-code --quiet; then
+              echo "No changes remaining after pull"
+              exit 0
+            fi
+            git commit -m "Updated by qiita-cli"
+          done
 
       - name: Add created_at to Front Matter
         if: steps.check.outputs.changed == 'true'
@@ -102,7 +162,28 @@ jobs:
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add -A
             git diff --cached --quiet || git commit -m "Add created_at to Front Matter [skip ci]"
-            git push
+            MAX_ATTEMPTS=3
+            ATTEMPT=0
+            while ! git push; do
+              ATTEMPT=$((ATTEMPT + 1))
+              if [ "$ATTEMPT" -ge "$MAX_ATTEMPTS" ]; then
+                echo "::error::Push failed after $MAX_ATTEMPTS attempts"
+                exit 1
+              fi
+              echo "::warning::Push failed (attempt $ATTEMPT/$MAX_ATTEMPTS). Pulling and retrying with YAML restoration..."
+              BACKUP=$(mktemp -d)
+              cp -a public/. "$BACKUP/"
+              git reset --hard HEAD~1
+              git pull
+              cp -a "$BACKUP/." public/
+              rm -rf "$BACKUP"
+              git add -A
+              if git diff --staged --exit-code --quiet; then
+                echo "No changes remaining after pull"
+                break
+              fi
+              git commit -m "Add created_at to Front Matter [skip ci]"
+            done
           fi
 
       - name: Build notification message
