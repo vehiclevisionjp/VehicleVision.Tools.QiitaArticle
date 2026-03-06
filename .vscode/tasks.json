@@ -2,216 +2,100 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "npm: install",
+      "label": "npm: install（ルート）",
       "type": "shell",
       "command": "npm install",
       "group": "none",
       "problemMatcher": []
     },
     {
-      "label": "Qiita: ログイン",
+      "label": "npm: install（Calendar 拡張機能）",
       "type": "shell",
-      "command": "npx qiita login",
-      "group": "none",
-      "dependsOn": ["npm: install"],
-      "problemMatcher": []
-    },
-    {
-      "label": "Qiita: 新規記事作成",
-      "type": "shell",
-      "command": "npx qiita new ${input:articleSlug}",
-      "group": "none",
-      "dependsOn": ["npm: install"],
-      "problemMatcher": []
-    },
-    {
-      "label": "Qiita: 新規記事作成（ブランチ付き）",
-      "type": "shell",
-      "command": ".\\scripts\\New-Article.ps1 -Title '${input:newArticleTitle}' -Visibility '${input:articleVisibility}'",
-      "group": "none",
-      "dependsOn": ["npm: install"],
-      "problemMatcher": []
-    },
-    {
-      "label": "Qiita: 予約投稿記事作成（ブランチ付き）",
-      "type": "shell",
-      "command": ".\\scripts\\New-ScheduledArticle.ps1 -Date '${input:scheduledDate}' -Title '${input:scheduledArticleTitle}'",
-      "group": "none",
-      "dependsOn": ["npm: install"],
-      "problemMatcher": []
-    },
-    {
-      "label": "Qiita: 記事を投稿（指定）",
-      "type": "shell",
-      "command": "npx qiita publish ${input:articleSlug}",
-      "group": "none",
-      "dependsOn": ["npm: install"],
-      "problemMatcher": []
-    },
-    {
-      "label": "Qiita: 記事を全件投稿",
-      "type": "shell",
-      "command": "npx qiita publish --all",
-      "group": "none",
-      "dependsOn": ["npm: install"],
-      "problemMatcher": []
-    },
-    {
-      "label": "Qiita: 記事を全件強制投稿",
-      "type": "shell",
-      "command": "npx qiita publish --all --force",
-      "group": "none",
-      "dependsOn": ["npm: install"],
-      "problemMatcher": []
-    },
-    {
-      "label": "Qiita: 記事を同期（pull）",
-      "type": "shell",
-      "command": "npx qiita pull",
-      "group": "none",
-      "dependsOn": ["npm: install"],
-      "problemMatcher": []
-    },
-    {
-      "label": "Qiita: 記事を強制同期（pull --force）",
-      "type": "shell",
-      "command": "npx qiita pull --force",
-      "group": "none",
-      "dependsOn": ["npm: install"],
-      "problemMatcher": []
-    },
-    {
-      "label": "Qiita: バージョン確認",
-      "type": "shell",
-      "command": "npx qiita version",
-      "group": "none",
-      "dependsOn": ["npm: install"],
-      "problemMatcher": []
-    },
-    {
-      "label": "記事ファイル名の日付同期（DryRun）",
-      "type": "shell",
-      "command": ".\\scripts\\Sync-ArticleDates.ps1 -DryRun",
+      "command": "npm install",
+      "options": { "cwd": "${workspaceFolder}/extensions/calendar" },
       "group": "none",
       "problemMatcher": []
     },
     {
-      "label": "記事ファイル名の日付同期（実行）",
+      "label": "npm: install（MarkdownPreview 拡張機能）",
       "type": "shell",
-      "command": ".\\scripts\\Sync-ArticleDates.ps1 -Force",
+      "command": "npm install",
+      "options": { "cwd": "${workspaceFolder}/extensions/markdown-preview" },
       "group": "none",
       "problemMatcher": []
     },
     {
-      "label": "記事に created_at を追加（DryRun）",
-      "type": "shell",
-      "command": ".\\scripts\\Add-CreatedAt.ps1 -DryRun",
+      "label": "npm: install（全プロジェクト）",
+      "dependsOn": [
+        "npm: install（ルート）",
+        "npm: install（Calendar 拡張機能）",
+        "npm: install（MarkdownPreview 拡張機能）"
+      ],
+      "dependsOrder": "parallel",
       "group": "none",
       "problemMatcher": []
     },
     {
-      "label": "記事に created_at を追加（実行）",
+      "label": "Build: Calendar 拡張機能",
       "type": "shell",
-      "command": ".\\scripts\\Add-CreatedAt.ps1",
-      "group": "none",
+      "command": "pwsh -NoProfile -File ./scripts/Build-CalendarExtension.ps1",
+      "group": "build",
+      "dependsOn": ["npm: install（Calendar 拡張機能）"],
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "Build: MarkdownPreview 拡張機能",
+      "type": "shell",
+      "command": "pwsh -NoProfile -File ./scripts/Build-MarkdownPreview.ps1",
+      "group": "build",
+      "dependsOn": ["npm: install（MarkdownPreview 拡張機能）"],
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "Build: 全拡張機能",
+      "dependsOn": [
+        "Build: Calendar 拡張機能",
+        "Build: MarkdownPreview 拡張機能"
+      ],
+      "dependsOrder": "parallel",
+      "group": { "kind": "build", "isDefault": true },
       "problemMatcher": []
     },
     {
-      "label": "Lint: Markdownチェック",
-      "type": "npm",
-      "script": "lint",
-      "group": { "kind": "test", "isDefault": true },
-      "dependsOn": ["npm: install"],
-      "problemMatcher": ["$markdownlint"]
-    },
-    {
-      "label": "Lint: Markdown自動修正（一括）",
-      "type": "npm",
-      "script": "lint:fix",
-      "group": "test",
-      "dependsOn": ["npm: install"],
-      "problemMatcher": ["$markdownlint"]
-    },
-    {
-      "label": "Lint: Markdown自動修正（個別ファイル）",
+      "label": "Watch: Calendar 拡張機能",
       "type": "shell",
-      "command": "npx markdownlint-cli2 --fix \"${file}\"",
-      "group": "test",
-      "dependsOn": ["npm: install"],
-      "problemMatcher": ["$markdownlint"]
+      "command": "npm run watch",
+      "options": { "cwd": "${workspaceFolder}/extensions/calendar" },
+      "isBackground": true,
+      "group": "build",
+      "dependsOn": ["npm: install（Calendar 拡張機能）"],
+      "problemMatcher": "$tsc-watch"
     },
     {
-      "label": "Format: Prettierチェック",
+      "label": "Watch: MarkdownPreview 拡張機能",
+      "type": "shell",
+      "command": "npm run watch",
+      "options": { "cwd": "${workspaceFolder}/extensions/markdown-preview" },
+      "isBackground": true,
+      "group": "build",
+      "dependsOn": ["npm: install（MarkdownPreview 拡張機能）"],
+      "problemMatcher": "$tsc-watch"
+    },
+    {
+      "label": "Format: Prettier チェック",
       "type": "npm",
       "script": "format:check",
       "group": "test",
-      "dependsOn": ["npm: install"],
+      "dependsOn": ["npm: install（ルート）"],
       "problemMatcher": []
     },
     {
-      "label": "Format: Prettier実行",
+      "label": "Format: Prettier 実行",
       "type": "npm",
       "script": "format",
       "group": "test",
-      "dependsOn": ["npm: install"],
+      "dependsOn": ["npm: install（ルート）"],
       "problemMatcher": []
-    },
-    {
-      "label": "カレンダー拡張: ビルド＆インストール",
-      "type": "shell",
-      "command": ".\\scripts\\Build-CalendarExtension.ps1",
-      "group": "none",
-      "problemMatcher": []
-    },
-    {
-      "label": "カレンダー拡張: インストール",
-      "type": "shell",
-      "command": ".\\scripts\\Build-CalendarExtension.ps1 -InstallOnly",
-      "group": "none",
-      "problemMatcher": []
-    },
-    {
-      "label": "MD プレビュー拡張: ビルド＆インストール",
-      "type": "shell",
-      "command": ".\\scripts\\Build-MarkdownPreview.ps1",
-      "group": "none",
-      "problemMatcher": []
-    },
-    {
-      "label": "MD プレビュー拡張: インストール",
-      "type": "shell",
-      "command": ".\\scripts\\Build-MarkdownPreview.ps1 -InstallOnly",
-      "group": "none",
-      "problemMatcher": []
-    }
-  ],
-  "inputs": [
-    {
-      "id": "articleSlug",
-      "type": "promptString",
-      "description": "記事のファイルベース名（例: my-article）"
-    },
-    {
-      "id": "newArticleTitle",
-      "type": "promptString",
-      "description": "記事スラッグ（英数字・日本語・ハイフン推奨、ブランチ名・ファイル名に使用）"
-    },
-    {
-      "id": "articleVisibility",
-      "type": "pickString",
-      "description": "記事の公開設定を選択してください",
-      "options": ["public", "private"],
-      "default": "public"
-    },
-    {
-      "id": "scheduledDate",
-      "type": "promptString",
-      "description": "投稿予定日（YYYY-MM-DD形式、例: 2026-02-20）"
-    },
-    {
-      "id": "scheduledArticleTitle",
-      "type": "promptString",
-      "description": "記事タイトル（英数字・ハイフン推奨、ブランチ名・ファイル名に使用）"
     }
   ]
 }

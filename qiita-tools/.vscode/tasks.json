@@ -1,0 +1,189 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "npm: install",
+      "type": "shell",
+      "command": "npm install",
+      "group": "none",
+      "problemMatcher": []
+    },
+    {
+      "label": "Qiita: ログイン",
+      "type": "shell",
+      "command": "npx qiita login",
+      "group": "none",
+      "dependsOn": ["npm: install"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Qiita: 新規記事作成",
+      "type": "shell",
+      "command": "npx qiita new ${input:articleSlug}",
+      "group": "none",
+      "dependsOn": ["npm: install"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Qiita: 新規記事作成（ブランチ付き）",
+      "type": "shell",
+      "command": ".\\scripts\\New-Article.ps1 -Title '${input:newArticleTitle}' -Visibility '${input:articleVisibility}'",
+      "group": "none",
+      "dependsOn": ["npm: install"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Qiita: 予約投稿記事作成（ブランチ付き）",
+      "type": "shell",
+      "command": ".\\scripts\\New-ScheduledArticle.ps1 -Date '${input:scheduledDate}' -Title '${input:scheduledArticleTitle}'",
+      "group": "none",
+      "dependsOn": ["npm: install"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Qiita: 記事を投稿（指定）",
+      "type": "shell",
+      "command": "npx qiita publish ${input:articleSlug}",
+      "group": "none",
+      "dependsOn": ["npm: install"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Qiita: 記事を全件投稿",
+      "type": "shell",
+      "command": "npx qiita publish --all",
+      "group": "none",
+      "dependsOn": ["npm: install"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Qiita: 記事を全件強制投稿",
+      "type": "shell",
+      "command": "npx qiita publish --all --force",
+      "group": "none",
+      "dependsOn": ["npm: install"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Qiita: 記事を同期（pull）",
+      "type": "shell",
+      "command": "npx qiita pull",
+      "group": "none",
+      "dependsOn": ["npm: install"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Qiita: 記事を強制同期（pull --force）",
+      "type": "shell",
+      "command": "npx qiita pull --force",
+      "group": "none",
+      "dependsOn": ["npm: install"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Qiita: バージョン確認",
+      "type": "shell",
+      "command": "npx qiita version",
+      "group": "none",
+      "dependsOn": ["npm: install"],
+      "problemMatcher": []
+    },
+    {
+      "label": "記事ファイル名の日付同期（DryRun）",
+      "type": "shell",
+      "command": ".\\scripts\\Sync-ArticleDates.ps1 -DryRun",
+      "group": "none",
+      "problemMatcher": []
+    },
+    {
+      "label": "記事ファイル名の日付同期（実行）",
+      "type": "shell",
+      "command": ".\\scripts\\Sync-ArticleDates.ps1 -Force",
+      "group": "none",
+      "problemMatcher": []
+    },
+    {
+      "label": "記事に created_at を追加（DryRun）",
+      "type": "shell",
+      "command": ".\\scripts\\Add-CreatedAt.ps1 -DryRun",
+      "group": "none",
+      "problemMatcher": []
+    },
+    {
+      "label": "記事に created_at を追加（実行）",
+      "type": "shell",
+      "command": ".\\scripts\\Add-CreatedAt.ps1",
+      "group": "none",
+      "problemMatcher": []
+    },
+    {
+      "label": "Lint: Markdownチェック",
+      "type": "npm",
+      "script": "lint",
+      "group": { "kind": "test", "isDefault": true },
+      "dependsOn": ["npm: install"],
+      "problemMatcher": ["$markdownlint"]
+    },
+    {
+      "label": "Lint: Markdown自動修正（一括）",
+      "type": "npm",
+      "script": "lint:fix",
+      "group": "test",
+      "dependsOn": ["npm: install"],
+      "problemMatcher": ["$markdownlint"]
+    },
+    {
+      "label": "Lint: Markdown自動修正（個別ファイル）",
+      "type": "shell",
+      "command": "npx markdownlint-cli2 --fix \"${file}\"",
+      "group": "test",
+      "dependsOn": ["npm: install"],
+      "problemMatcher": ["$markdownlint"]
+    },
+    {
+      "label": "Format: Prettierチェック",
+      "type": "npm",
+      "script": "format:check",
+      "group": "test",
+      "dependsOn": ["npm: install"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Format: Prettier実行",
+      "type": "npm",
+      "script": "format",
+      "group": "test",
+      "dependsOn": ["npm: install"],
+      "problemMatcher": []
+    },
+  ],
+  "inputs": [
+    {
+      "id": "articleSlug",
+      "type": "promptString",
+      "description": "記事のファイルベース名（例: my-article）"
+    },
+    {
+      "id": "newArticleTitle",
+      "type": "promptString",
+      "description": "記事スラッグ（英数字・日本語・ハイフン推奨、ブランチ名・ファイル名に使用）"
+    },
+    {
+      "id": "articleVisibility",
+      "type": "pickString",
+      "description": "記事の公開設定を選択してください",
+      "options": ["public", "private"],
+      "default": "public"
+    },
+    {
+      "id": "scheduledDate",
+      "type": "promptString",
+      "description": "投稿予定日（YYYY-MM-DD形式、例: 2026-02-20）"
+    },
+    {
+      "id": "scheduledArticleTitle",
+      "type": "promptString",
+      "description": "記事タイトル（英数字・ハイフン推奨、ブランチ名・ファイル名に使用）"
+    }
+  ]
+}

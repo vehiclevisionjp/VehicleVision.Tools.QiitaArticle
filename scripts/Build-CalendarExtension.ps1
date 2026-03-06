@@ -31,7 +31,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$extensionDir = Join-Path $PSScriptRoot '..\tools\VehicleVision.Tools.QiitaArticle.Calendar'
+$extensionDir = Join-Path $PSScriptRoot '..\extensions\calendar'
 $vsixFile = 'VehicleVision.Tools.QiitaArticle.Calendar.vsix'
 
 # -InstallOnly: 既存 vsix をそのままインストール

@@ -62,7 +62,7 @@ export class GitService {
     }
 
     // コミット
-    const escapedMessage = message.replace(/"/g, '\\"');
+    const escapedMessage = message.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
     const commitResult = this.runGit(`commit -m "${escapedMessage}"`);
     if (!commitResult.success) {
       return { success: false, error: `コミットに失敗しました: ${commitResult.output}` };
