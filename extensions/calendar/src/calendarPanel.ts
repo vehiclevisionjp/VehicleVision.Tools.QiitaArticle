@@ -314,22 +314,23 @@ export class CalendarPanel {
     let readyForPublish = false;
 
     if (isToday) {
-      // scheduled_publish を除去
-      content = content.replace(/\nscheduled_publish:\s*"[^"]*"/, '');
+      // scheduled_publish を除去（ダブルクォート・シングルクォート・クォートなしに対応）
+      content = content.replace(/\r?\nscheduled_publish:\s*(?:"[^"]*"|'[^']*'|\S+)/, '');
       // ignorePublish を false に変更（投稿準備状態にする）
       if (/ignorePublish:\s*true/i.test(content)) {
         content = content.replace(/ignorePublish:\s*true/i, 'ignorePublish: false');
         readyForPublish = true;
       }
-    } else if (/scheduled_publish:\s*"[^"]*"/.test(content)) {
+    } else if (/scheduled_publish:\s*(?:"[^"]*"|'[^']*'|\S+)/.test(content)) {
       content = content.replace(
-        /scheduled_publish:\s*"[^"]*"/,
+        /scheduled_publish:\s*(?:"[^"]*"|'[^']*'|\S+)/,
         `scheduled_publish: "${newDate}"`
       );
     } else {
       // scheduled_publish が存在しない場合、Front Matter の末尾（閉じ --- の前）に追加
+      // CRLF / LF 両対応
       content = content.replace(
-        /^(---\n[\s\S]*?\n)(---)/m,
+        /^(---\r?\n[\s\S]*?\r?\n)(---)/m,
         `$1scheduled_publish: "${newDate}"\n$2`
       );
     }
@@ -383,9 +384,9 @@ export class CalendarPanel {
       return { success: false, error: `同名のファイルが既に存在します: ${newSlug}.md` };
     }
 
-    // scheduled_publish を削除
+    // scheduled_publish を削除（ダブルクォート・シングルクォート・クォートなしに対応）
     let content = fs.readFileSync(oldPath, 'utf-8');
-    content = content.replace(/scheduled_publish:\s*"[^"]*"\n?/, '');
+    content = content.replace(/scheduled_publish:\s*(?:"[^"]*"|'[^']*'|\S+)\r?\n?/, '');
 
     fs.writeFileSync(newPath, content, 'utf-8');
     fs.unlinkSync(oldPath);
