@@ -11,6 +11,7 @@ import type MarkdownIt from 'markdown-it';
  * - ```math 数式ブロック（KaTeX 連携）
  * - インラインカラーコード (#FFF, rgb(), hsl())
  * - 改行の自動 <br> 変換 (HARDBREAKS)
+ * - 脚注 [^1] (footnotes)
  */
 export function activate() {
   return {
@@ -29,6 +30,9 @@ export function activate() {
 
       // インラインカラーコード
       inlineColorPlugin(md);
+
+      // 脚注
+      footnotePlugin(md);
 
       return md;
     },
@@ -224,6 +228,168 @@ function inlineColorPlugin(md: MarkdownIt) {
 
     return rendered;
   };
+}
+
+// =====================================================================
+// 脚注 [^1] (footnotes)
+// =====================================================================
+
+function footnotePlugin(md: MarkdownIt) {
+  // 脚注定義: [^label]: 本文 を収集
+  // 脚注参照: [^label] をインラインリンクに変換
+
+  // --- ブロックルール: 脚注定義を収集 ---
+  md.block.ruler.before('reference', 'qiita_footnote_def', (state, startLine, endLine, silent) => {
+    const pos = state.bMarks[startLine] + state.tShift[startLine];
+    const max = state.eMarks[startLine];
+    const lineText = state.src.slice(pos, max);
+
+    // [^label]: で始まる行を検出
+    const match = lineText.match(/^\[\^([^\]]+)\]:\s+(.*)/);
+    if (!match) return false;
+    if (silent) return true;
+
+    const label = match[1];
+    const firstLineContent = match[2];
+
+    // 複数行の脚注定義を収集（次行がインデントされている場合）
+    let content = firstLineContent;
+    let nextLine = startLine + 1;
+    while (nextLine < endLine) {
+      const nextPos = state.bMarks[nextLine] + state.tShift[nextLine];
+      const nextMax = state.eMarks[nextLine];
+      const nextText = state.src.slice(nextPos, nextMax);
+
+      // インデントが2スペース以上 or タブなら継続行
+      const rawLineStart = state.bMarks[nextLine];
+      const rawPrefix = state.src.slice(rawLineStart, nextPos);
+      if (rawPrefix.length < 2 && nextText.length > 0) break;
+      if (nextText.length === 0) {
+        // 空行は許容するが、次の行もチェック
+        content += '\n';
+        nextLine++;
+        continue;
+      }
+
+      content += '\n' + nextText;
+      nextLine++;
+    }
+
+    // 脚注定義を env に保存（レンダリング時に参照）
+    if (!state.env.footnotes) state.env.footnotes = {};
+    if (!state.env.footnoteOrder) state.env.footnoteOrder = [];
+    state.env.footnotes[label] = content.trim();
+    if (state.env.footnoteOrder.indexOf(label) === -1) {
+      state.env.footnoteOrder.push(label);
+    }
+
+    // 空のトークンを生成（脚注定義自体は表示しない）
+    const token = state.push('footnote_def', '', 0);
+    token.meta = { label };
+    token.map = [startLine, nextLine];
+    token.hidden = true;
+
+    state.line = nextLine;
+    return true;
+  });
+
+  // --- インラインルール: [^label] を脚注参照に変換 ---
+  md.inline.ruler.after('image', 'qiita_footnote_ref', (state, silent) => {
+    const src = state.src;
+    const pos = state.pos;
+    const max = state.posMax;
+
+    if (pos + 2 >= max) return false;
+    if (src.charCodeAt(pos) !== 0x5B /* [ */) return false;
+    if (src.charCodeAt(pos + 1) !== 0x5E /* ^ */) return false;
+
+    // ラベルの終端 ] を探す
+    let labelEnd = pos + 2;
+    while (labelEnd < max && src.charCodeAt(labelEnd) !== 0x5D /* ] */) {
+      labelEnd++;
+    }
+    if (labelEnd >= max) return false;
+    if (labelEnd === pos + 2) return false; // 空ラベル
+
+    const label = src.slice(pos + 2, labelEnd);
+
+    if (silent) {
+      state.pos = labelEnd + 1;
+      return true;
+    }
+
+    // 脚注参照トークンを生成
+    const token = state.push('footnote_ref', '', 0);
+    token.meta = { label };
+
+    // 参照順序を記録
+    if (!state.env.footnoteOrder) state.env.footnoteOrder = [];
+    if (state.env.footnoteOrder.indexOf(label) === -1) {
+      state.env.footnoteOrder.push(label);
+    }
+
+    state.pos = labelEnd + 1;
+    return true;
+  });
+
+  // --- コアルール: 脚注セクションをドキュメント末尾に追加 ---
+  md.core.ruler.after('inline', 'qiita_footnote_tail', (state) => {
+    const footnotes = state.env.footnotes;
+    const order = state.env.footnoteOrder;
+    if (!footnotes || !order || order.length === 0) return;
+
+    // 脚注定義トークン（hidden）を除去
+    state.tokens = state.tokens.filter((t) => t.type !== 'footnote_def');
+
+    // ドキュメント末尾に脚注セクションを追加
+    const openToken = new state.Token('html_block', '', 0);
+    openToken.content = '<section class="qiita-footnotes"><hr class="qiita-footnotes-sep">\n<ol class="qiita-footnotes-list">\n';
+    state.tokens.push(openToken);
+
+    for (let i = 0; i < order.length; i++) {
+      const label = order[i];
+      const content = footnotes[label] || label;
+
+      const itemToken = new state.Token('html_block', '', 0);
+      const renderedContent = md.renderInline(content, state.env);
+      itemToken.content =
+        `<li id="fn-${escapeHtml(label)}" class="qiita-footnote-item">` +
+        `<p>${renderedContent} ` +
+        `<a href="#fnref-${escapeHtml(label)}" class="qiita-footnote-backref" title="戻る">↩</a></p></li>\n`;
+      state.tokens.push(itemToken);
+    }
+
+    const closeToken = new state.Token('html_block', '', 0);
+    closeToken.content = '</ol>\n</section>\n';
+    state.tokens.push(closeToken);
+  });
+
+  // --- レンダラー: 脚注参照をリンクとして描画 ---
+  md.renderer.rules.footnote_ref = (tokens, idx) => {
+    const label = tokens[idx].meta.label;
+    const env = tokens[idx].meta.env || {};
+    const order: string[] = env.footnoteOrder || [];
+    let num = order.indexOf(label) + 1;
+    if (num === 0) num = parseInt(label, 10) || 1;
+
+    return (
+      `<sup class="qiita-footnote-ref">` +
+      `<a href="#fn-${escapeHtml(label)}" id="fnref-${escapeHtml(label)}">${num}</a></sup>`
+    );
+  };
+
+  // コアルールで env を参照に渡す
+  md.core.ruler.after('qiita_footnote_tail', 'qiita_footnote_env', (state) => {
+    for (const token of state.tokens) {
+      if (token.type === 'inline' && token.children) {
+        for (const child of token.children) {
+          if (child.type === 'footnote_ref') {
+            child.meta.env = state.env;
+          }
+        }
+      }
+    }
+  });
 }
 
 // =====================================================================

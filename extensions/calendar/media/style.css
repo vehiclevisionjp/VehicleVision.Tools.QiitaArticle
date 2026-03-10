@@ -754,12 +754,29 @@ button .codicon {
 }
 
 .day-cell.drop-target {
+  position: relative;
+}
+
+.day-cell.drop-target::after {
+  content: '';
+  position: absolute;
+  inset: 0;
   background: rgba(0, 86, 214, 0.04);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .day-cell.drag-over {
-  background: rgba(0, 86, 214, 0.12);
   box-shadow: inset 0 0 0 2px var(--scheduled);
+}
+
+.day-cell.drag-over::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 86, 214, 0.12);
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* ブランチ追加記事のマーカー */

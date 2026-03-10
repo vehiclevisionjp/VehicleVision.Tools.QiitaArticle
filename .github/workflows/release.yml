@@ -43,6 +43,23 @@ jobs:
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "New version: $NEW_VERSION"
 
+      # ── 拡張機能の package.json バージョンをリリースと統一 ──
+      - name: Sync extension versions
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.new_version }}"
+          for pkg in extensions/calendar/package.json extensions/markdown-preview/package.json; do
+            node -e "
+              const fs = require('fs');
+              const raw = fs.readFileSync('$pkg', 'utf8');
+              const pkg = JSON.parse(raw);
+              const updated = raw.replace(
+                /\"version\":\s*\"[^\"]*\"/,
+                '\"version\": \"' + process.argv[1] + '\"'
+              );
+              fs.writeFileSync('$pkg', updated);
+            " "$NEW_VERSION"
+          done
+
       # ── Calendar 拡張のビルド ──────────────────────────────
       - name: Build Calendar extension
         working-directory: extensions/calendar
@@ -72,7 +89,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add package.json
+          git add package.json extensions/calendar/package.json extensions/markdown-preview/package.json
           git commit -m "chore: bump version to v${{ steps.new_version.outputs.new_version }}"
           git tag "v${{ steps.new_version.outputs.new_version }}"
           git push origin HEAD "v${{ steps.new_version.outputs.new_version }}"

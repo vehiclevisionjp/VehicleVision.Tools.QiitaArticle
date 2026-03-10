@@ -213,3 +213,56 @@ details[open] > summary {
 details > *:last-child {
   margin-bottom: 16px;
 }
+
+/* ---------------------------------------------------------------------
+ * 脚注 (footnotes)
+ * --------------------------------------------------------------------- */
+
+.qiita-footnotes-sep {
+  margin-top: 32px;
+  border: none;
+  border-top: 1px solid rgba(128, 128, 128, 0.3);
+}
+
+.qiita-footnotes-list {
+  padding-left: 24px;
+  font-size: 0.9em;
+  color: inherit;
+}
+
+.qiita-footnote-item {
+  margin: 4px 0;
+  line-height: 1.6;
+}
+
+.qiita-footnote-item p {
+  margin: 0;
+}
+
+.qiita-footnote-ref a {
+  text-decoration: none;
+  color: #007acc;
+  font-weight: 600;
+  padding: 0 2px;
+}
+
+.qiita-footnote-ref a:hover {
+  text-decoration: underline;
+}
+
+.qiita-footnote-backref {
+  text-decoration: none;
+  color: #007acc;
+  font-size: 0.85em;
+  margin-left: 4px;
+}
+
+.vscode-dark .qiita-footnote-ref a,
+.vscode-high-contrast .qiita-footnote-ref a {
+  color: #3794ff;
+}
+
+.vscode-dark .qiita-footnote-backref,
+.vscode-high-contrast .qiita-footnote-backref {
+  color: #3794ff;
+}
