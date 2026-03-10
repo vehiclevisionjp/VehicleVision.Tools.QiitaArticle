@@ -21,7 +21,7 @@ VS Code で Qiita 記事を楽に管理するための**追加ツールキット
 - **Node.js** 20.0.0 以上
 - **PowerShell** 7.0 以上（スクリプト実行用）
 - **VS Code** 1.85.0 以上
-- **Qiita CLI** がインストール済みであること（[Qiita CLI の導入](https://github.com/increments/qiita-cli)）
+- **Qiita CLI** 1.8.0 以上（サブディレクトリを使った記事管理に必要）（[Qiita CLI の導入](https://github.com/increments/qiita-cli)）
 
 ### 1. VS Code 拡張機能のインストール
 
