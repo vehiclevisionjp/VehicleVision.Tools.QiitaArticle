@@ -263,7 +263,7 @@ function footnotePlugin(md: MarkdownIt) {
       // インデントが2スペース以上 or タブなら継続行
       const rawLineStart = state.bMarks[nextLine];
       const rawPrefix = state.src.slice(rawLineStart, nextPos);
-      if (rawPrefix.length < 2 && nextText.length > 0) break;
+      if (rawPrefix.length < 2 && rawPrefix.indexOf('\t') === -1 && nextText.length > 0) break;
       if (nextText.length === 0) {
         // 空行は許容するが、次の行もチェック
         content += '\n';
@@ -367,8 +367,7 @@ function footnotePlugin(md: MarkdownIt) {
   // --- レンダラー: 脚注参照をリンクとして描画 ---
   md.renderer.rules.footnote_ref = (tokens, idx) => {
     const label = tokens[idx].meta.label;
-    const env = tokens[idx].meta.env || {};
-    const order: string[] = env.footnoteOrder || [];
+    const order: string[] = tokens[idx].meta.order || [];
     let num = order.indexOf(label) + 1;
     if (num === 0) num = parseInt(label, 10) || 1;
 
@@ -378,13 +377,15 @@ function footnotePlugin(md: MarkdownIt) {
     );
   };
 
-  // コアルールで env を参照に渡す
+  // コアルールで footnoteOrder を参照トークンに渡す
   md.core.ruler.after('qiita_footnote_tail', 'qiita_footnote_env', (state) => {
+    const order = state.env.footnoteOrder;
+    if (!order) return;
     for (const token of state.tokens) {
       if (token.type === 'inline' && token.children) {
         for (const child of token.children) {
           if (child.type === 'footnote_ref') {
-            child.meta.env = state.env;
+            child.meta.order = order;
           }
         }
       }
