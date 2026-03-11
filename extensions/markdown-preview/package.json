@@ -1,5 +1,5 @@
 {
-  "name": "vehiclevision-tools-qiitaarticle-markdownpreview",
+  "name": "VehicleVision-Tools-QiitaArticle-MarkdownPreview",
   "displayName": "Qiita Markdown Preview",
   "license": "AGPL-3.0-only",
   "description": "VS Code の Markdown プレビューを Qiita 固有の構文（:::note, lang:filename, 数式等）に対応させる拡張機能",
