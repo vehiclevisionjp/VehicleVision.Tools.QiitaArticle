@@ -556,7 +556,7 @@ function renderServiceCard(
   const escapedUrl = escapeHtml(url);
 
   // YouTube はサムネイルを表示
-  if (service.name === 'YouTube' && info?.id) {
+  if (service.name === 'YouTube' && info?.id && /^[A-Za-z0-9_-]+$/.test(info.id)) {
     return (
       `<div class="qiita-embed qiita-embed-youtube">` +
       `<a href="${escapedUrl}" class="qiita-embed-link" title="${escapeHtml(service.name)}">` +
