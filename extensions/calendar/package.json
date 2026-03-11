@@ -3,7 +3,7 @@
   "displayName": "Qiita 記事カレンダー",
   "description": "Qiita 記事の投稿スケジュールをカレンダー形式で管理する VS Code 拡張機能",
   "license": "AGPL-3.0-only",
-  "version": "2026.305.954",
+  "version": "0.0.5",
   "publisher": "local",
   "engines": {
     "vscode": "^1.85.0"
