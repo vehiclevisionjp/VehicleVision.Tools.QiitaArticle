@@ -266,3 +266,101 @@ details > *:last-child {
 .vscode-high-contrast .qiita-footnote-backref {
   color: #3794ff;
 }
+
+/* ---------------------------------------------------------------------
+ * 埋め込みコンテンツ (embed)
+ * --------------------------------------------------------------------- */
+
+.qiita-embed {
+  margin: 16px 0;
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.qiita-embed:hover {
+  border-color: rgba(128, 128, 128, 0.6);
+}
+
+.qiita-embed-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.qiita-embed-icon {
+  font-size: 1.4em;
+  flex-shrink: 0;
+}
+
+.qiita-embed-service {
+  font-weight: 600;
+  font-size: 0.9em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.qiita-embed-url {
+  font-size: 0.8em;
+  color: #007acc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.vscode-dark .qiita-embed-url,
+.vscode-high-contrast .qiita-embed-url {
+  color: #3794ff;
+}
+
+/* YouTube サムネイル付き */
+.qiita-embed-youtube .qiita-embed-link {
+  flex-direction: column;
+  padding: 0;
+  align-items: stretch;
+}
+
+.qiita-embed-thumbnail {
+  width: 100%;
+  padding-top: 56.25%; /* 16:9 */
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+.qiita-embed-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60px;
+  height: 42px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.2em;
+}
+
+.qiita-embed-youtube .qiita-embed-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+}
+
+/* リンクカード */
+.qiita-embed-linkcard {
+  background: rgba(128, 128, 128, 0.03);
+}
+
+.vscode-dark .qiita-embed-linkcard {
+  background: rgba(255, 255, 255, 0.03);
+}

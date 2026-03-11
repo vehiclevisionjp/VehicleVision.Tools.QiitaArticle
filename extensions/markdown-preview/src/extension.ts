@@ -12,6 +12,7 @@ import type MarkdownIt from 'markdown-it';
  * - インラインカラーコード (#FFF, rgb(), hsl())
  * - 改行の自動 <br> 変換 (HARDBREAKS)
  * - 脚注 [^1] (footnotes)
+ * - 埋め込みコンテンツ (YouTube, Twitter/X, CodePen, Gist 等)
  */
 export function activate() {
   return {
@@ -33,6 +34,9 @@ export function activate() {
 
       // 脚注
       footnotePlugin(md);
+
+      // 埋め込みコンテンツ
+      embedPlugin(md);
 
       return md;
     },
@@ -391,6 +395,212 @@ function footnotePlugin(md: MarkdownIt) {
       }
     }
   });
+}
+
+// =====================================================================
+// 埋め込みコンテンツ (URL → サービス別プレビューカード)
+// =====================================================================
+
+/**
+ * 対応サービス一覧（Qiita 公式の埋め込み可能コンテンツに準拠）
+ * @see https://qiita.com/Qiita/items/612e2e149b9f9451c144
+ */
+interface EmbedService {
+  name: string;
+  icon: string;
+  pattern: RegExp;
+  extract?: (url: string) => { id?: string } | null;
+}
+
+const EMBED_SERVICES: EmbedService[] = [
+  {
+    name: 'YouTube',
+    icon: '▶',
+    pattern: /^https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]+)/,
+    extract: (url) => {
+      const m = url.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]+)/);
+      return m ? { id: m[1] } : null;
+    },
+  },
+  {
+    name: 'X (Twitter)',
+    icon: '𝕏',
+    pattern: /^https?:\/\/(?:twitter\.com|x\.com)\/[^/]+\/status\/\d+/,
+  },
+  {
+    name: 'GitHub Gist',
+    icon: '📋',
+    pattern: /^https?:\/\/gist\.github\.com\/[^/]+\/[0-9a-f]+/,
+  },
+  {
+    name: 'CodeSandbox',
+    icon: '📦',
+    pattern: /^https?:\/\/codesandbox\.io\//,
+  },
+  {
+    name: 'CodePen',
+    icon: '✏️',
+    pattern: /^https?:\/\/codepen\.io\//,
+  },
+  {
+    name: 'Speaker Deck',
+    icon: '🎤',
+    pattern: /^https?:\/\/speakerdeck\.com\//,
+  },
+  {
+    name: 'SlideShare',
+    icon: '📊',
+    pattern: /^https?:\/\/www\.slideshare\.net\//,
+  },
+  {
+    name: 'Google Slides',
+    icon: '📊',
+    pattern: /^https?:\/\/docs\.google\.com\/presentation\//,
+  },
+  {
+    name: 'Docswell',
+    icon: '📑',
+    pattern: /^https?:\/\/(?:www\.)?docswell\.com\//,
+  },
+  {
+    name: 'Figma',
+    icon: '🎨',
+    pattern: /^https?:\/\/(?:www\.|embed\.)?figma\.com\//,
+  },
+  {
+    name: 'StackBlitz',
+    icon: '⚡',
+    pattern: /^https?:\/\/stackblitz\.com\//,
+  },
+  {
+    name: 'Asciinema',
+    icon: '🖥️',
+    pattern: /^https?:\/\/asciinema\.org\//,
+  },
+  {
+    name: 'blueprintUE',
+    icon: '🔵',
+    pattern: /^https?:\/\/blueprintue\.com\//,
+  },
+  {
+    name: 'Claude Artifacts',
+    icon: '🤖',
+    pattern: /^https?:\/\/claude\.site\//,
+  },
+  {
+    name: 'Google Drive',
+    icon: '📁',
+    pattern: /^https?:\/\/drive\.google\.com\//,
+  },
+];
+
+function embedPlugin(md: MarkdownIt) {
+  // コアルール: 段落内がURLのみの場合、埋め込みカードに変換する
+  md.core.ruler.after('inline', 'qiita_embed', (state) => {
+    const tokens = state.tokens;
+    const newTokens: typeof tokens = [];
+
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i];
+
+      // paragraph_open + inline + paragraph_close のパターンを検出
+      if (
+        token.type === 'paragraph_open' &&
+        i + 2 < tokens.length &&
+        tokens[i + 1].type === 'inline' &&
+        tokens[i + 2].type === 'paragraph_close'
+      ) {
+        const inlineToken = tokens[i + 1];
+        const content = inlineToken.content.trim();
+
+        // URL のみの段落かチェック
+        if (/^https?:\/\/\S+$/.test(content) && !content.includes(' ')) {
+          const embedHtml = renderEmbedCard(content);
+          if (embedHtml) {
+            // 埋め込みカードに変換
+            const htmlToken = new state.Token('html_block', '', 0);
+            htmlToken.content = embedHtml;
+            htmlToken.map = token.map;
+            newTokens.push(htmlToken);
+            i += 2; // paragraph_close をスキップ
+            continue;
+          }
+        }
+      }
+
+      newTokens.push(token);
+    }
+
+    state.tokens = newTokens;
+  });
+}
+
+function renderEmbedCard(url: string): string | null {
+  // 既知サービスの判定
+  for (const service of EMBED_SERVICES) {
+    if (service.pattern.test(url)) {
+      const info = service.extract ? service.extract(url) : null;
+      return renderServiceCard(service, url, info);
+    }
+  }
+
+  // 既知サービス以外の URL → リンクカード
+  return renderLinkCard(url);
+}
+
+function renderServiceCard(
+  service: EmbedService,
+  url: string,
+  info: { id?: string } | null,
+): string {
+  const escapedUrl = escapeHtml(url);
+
+  // YouTube はサムネイルを表示
+  if (service.name === 'YouTube' && info?.id) {
+    return (
+      `<div class="qiita-embed qiita-embed-youtube">` +
+      `<a href="${escapedUrl}" class="qiita-embed-link" title="${escapeHtml(service.name)}">` +
+      `<div class="qiita-embed-thumbnail" style="background-image: url('https://img.youtube.com/vi/${escapeHtml(info.id)}/hqdefault.jpg')">` +
+      `<span class="qiita-embed-play">▶</span>` +
+      `</div>` +
+      `<div class="qiita-embed-meta">` +
+      `<span class="qiita-embed-icon">${service.icon}</span>` +
+      `<span class="qiita-embed-service">${escapeHtml(service.name)}</span>` +
+      `<span class="qiita-embed-url">${escapedUrl}</span>` +
+      `</div>` +
+      `</a></div>\n`
+    );
+  }
+
+  return (
+    `<div class="qiita-embed qiita-embed-service">` +
+    `<a href="${escapedUrl}" class="qiita-embed-link" title="${escapeHtml(service.name)}">` +
+    `<span class="qiita-embed-icon">${service.icon}</span>` +
+    `<span class="qiita-embed-service">${escapeHtml(service.name)}</span>` +
+    `<span class="qiita-embed-url">${escapedUrl}</span>` +
+    `</a></div>\n`
+  );
+}
+
+function renderLinkCard(url: string): string {
+  const escapedUrl = escapeHtml(url);
+
+  // ドメイン名を表示
+  let domain = '';
+  try {
+    domain = new URL(url).hostname;
+  } catch {
+    domain = url;
+  }
+
+  return (
+    `<div class="qiita-embed qiita-embed-linkcard">` +
+    `<a href="${escapedUrl}" class="qiita-embed-link" title="${escapedUrl}">` +
+    `<span class="qiita-embed-icon">🔗</span>` +
+    `<span class="qiita-embed-service">${escapeHtml(domain)}</span>` +
+    `<span class="qiita-embed-url">${escapedUrl}</span>` +
+    `</a></div>\n`
+  );
 }
 
 // =====================================================================
