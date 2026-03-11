@@ -1,6 +1,6 @@
 {
-  "name": "vehiclevision-tools-qiitaarticle-calendar",
-  "displayName": "Qiita 記事カレンダー",
+  "name": "VehicleVision-Tools-QiitaArticle-Calendar",
+  "displayName": "VehicleVision.Tools.QiitaArticle.Calendar",
   "description": "Qiita 記事の投稿スケジュールをカレンダー形式で管理する VS Code 拡張機能",
   "license": "AGPL-3.0-only",
   "version": "0.0.5",
