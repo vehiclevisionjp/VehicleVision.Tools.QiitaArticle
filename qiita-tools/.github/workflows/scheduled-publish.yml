@@ -5,7 +5,7 @@ name: Scheduled Publish
 
 on:
   schedule:
-    - cron: '0 0,9 * * *'  # 毎日 JST 9:00/18:00 (UTC 0:00/9:00)
+    - cron: '0 0,9 * * *' # 毎日 JST 9:00/18:00 (UTC 0:00/9:00)
   workflow_dispatch:
 
 permissions:
@@ -27,7 +27,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install qiita-cli
         run: npm install -g @qiita/qiita-cli@v1.8.0

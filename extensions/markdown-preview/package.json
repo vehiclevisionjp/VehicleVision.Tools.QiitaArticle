@@ -5,6 +5,7 @@
   "description": "VS Code の Markdown プレビューを Qiita 固有の構文（:::note, lang:filename, 数式等）に対応させる拡張機能",
   "version": "0.0.8",
   "publisher": "PMCCoLtdITSolutionDiv",
+  "icon": "icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/vehiclevisionjp/VehicleVision.Tools.QiitaArticle"
