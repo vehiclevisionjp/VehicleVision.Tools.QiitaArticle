@@ -25,6 +25,22 @@ VS Code で Qiita 記事を楽に管理するための**追加ツールキット
 
 ### 1. VS Code 拡張機能のインストール
 
+VS Code の拡張機能ビュー（`Ctrl+Shift+X`）で以下を検索してインストールします:
+
+| 拡張 ID                                                                  | 用途                      |
+| ------------------------------------------------------------------------ | ------------------------- |
+| `PMCCoLtdITSolutionDiv.VehicleVision-Tools-QiitaArticle-Calendar`        | 記事カレンダー            |
+| `PMCCoLtdITSolutionDiv.VehicleVision-Tools-QiitaArticle-MarkdownPreview` | Qiita Markdown プレビュー |
+
+またはコマンドラインからインストール:
+
+```bash
+code --install-extension PMCCoLtdITSolutionDiv.VehicleVision-Tools-QiitaArticle-Calendar
+code --install-extension PMCCoLtdITSolutionDiv.VehicleVision-Tools-QiitaArticle-MarkdownPreview
+```
+
+#### 手動インストール（VSIX ファイル）
+
 [Releases ページ](../../releases/latest) から最新の `.vsix` ファイルをダウンロードし、VS Code にインストールします。
 
 ```bash
@@ -38,7 +54,7 @@ code --install-extension VehicleVision.Tools.QiitaArticle.Calendar.vsix
 code --install-extension VehicleVision.Tools.QiitaArticle.MarkdownPreview.vsix
 ```
 
-または VS Code の拡張機能ビュー（`Ctrl+Shift+X`）→ `...` → `VSIX からインストール` でインストールできます。
+または VS Code の拡張機能ビュー → `...` → `VSIX からインストール` でもインストールできます。
 
 ### 2. lint/ツールファイルのセットアップ
 
