@@ -65,7 +65,7 @@ jobs:
         run: |
           npm install
           npm run build
-          npx --yes @vscode/vsce package --no-dependencies --allow-missing-repository \
+          npx --yes @vscode/vsce package --no-dependencies \
             -o VehicleVision.Tools.QiitaArticle.Calendar.vsix
 
       # ── MarkdownPreview 拡張のビルド ──────────────────────
@@ -74,7 +74,7 @@ jobs:
         run: |
           npm install
           npm run build
-          npx --yes @vscode/vsce package --no-dependencies --allow-missing-repository \
+          npx --yes @vscode/vsce package --no-dependencies \
             -o VehicleVision.Tools.QiitaArticle.MarkdownPreview.vsix
 
       # ── lint/ツールファイルを ZIP にまとめる ──────────────
@@ -82,6 +82,17 @@ jobs:
         run: |
           cd qiita-tools
           zip -r ../qiita-tools.zip .
+
+      # ── VS Code Marketplace へ公開 ────────────────────────
+      - name: Publish to VS Code Marketplace
+        if: vars.VSCE_PUBLISH == 'true'
+        run: |
+          npx --yes @vscode/vsce publish \
+            --packagePath extensions/calendar/VehicleVision.Tools.QiitaArticle.Calendar.vsix
+          npx --yes @vscode/vsce publish \
+            --packagePath extensions/markdown-preview/VehicleVision.Tools.QiitaArticle.MarkdownPreview.vsix
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
       # ── バージョンコミット・タグ作成 ────────────────────────
       - name: Commit version update and create tag
