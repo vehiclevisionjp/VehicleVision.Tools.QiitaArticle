@@ -466,7 +466,7 @@ function renderCalendar() {
   });
 
   // 週の総数
-  var diffDays = Math.ceil((calEnd - calStartDate) / 86400000) + 1;
+  var diffDays = Math.floor((calEnd - calStartDate) / 86400000) + 1;
   var totalWeeks = Math.ceil(diffDays / 7);
 
   var prevWeekMonth = -1;
