@@ -288,7 +288,7 @@ checkout → publish → commit/push (リトライ付き) → created_at 追加 
 **処理ステップ:**
 
 ```
-checkout → 予約日チェック → ignorePublish 解除 → publish → created_at 追加 → 通知
+checkout → 予約日チェック → ignorePublish 解除 → publish → commit/push (リトライ付き) → created_at 追加 → 通知
 ```
 
 **スケジュール:**
