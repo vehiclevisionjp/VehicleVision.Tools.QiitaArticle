@@ -125,6 +125,9 @@ jobs:
       - name: Commit and push publish results
         if: steps.check.outputs.changed == 'true'
         run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
           BRANCH="${{ github.ref_name }}"
           MAX_RETRIES=3
 
