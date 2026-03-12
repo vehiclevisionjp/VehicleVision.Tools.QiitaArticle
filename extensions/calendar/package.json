@@ -3,7 +3,7 @@
   "displayName": "VehicleVision.Tools.QiitaArticle.Calendar",
   "description": "Qiita 記事の投稿スケジュールをカレンダー形式で管理する VS Code 拡張機能",
   "license": "AGPL-3.0-only",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "publisher": "PMCCoLtdITSolutionDiv",
   "repository": {
     "type": "git",
