@@ -3,7 +3,7 @@
   "displayName": "VehicleVision.Tools.QiitaArticle.MarkdownPreview",
   "license": "AGPL-3.0-only",
   "description": "VS Code の Markdown プレビューを Qiita 固有の構文（:::note, lang:filename, 数式等）に対応させる拡張機能",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "publisher": "PMCCoLtdITSolutionDiv",
   "repository": {
     "type": "git",
