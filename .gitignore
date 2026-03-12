@@ -16,10 +16,10 @@ npm-debug.log*
 # Qiita CLI
 .remote
 
-# Tools: ビルド生成物
+# Extensions: ビルド生成物
 *.vsix
-tools/**/bin/
-tools/**/obj/
-tools/**/dist/
-tools/**/node_modules/
-tools/**/package-lock.json
+extensions/**/bin/
+extensions/**/obj/
+extensions/**/dist/
+extensions/**/node_modules/
+extensions/**/package-lock.json

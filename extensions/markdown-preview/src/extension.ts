@@ -53,72 +53,76 @@ function noteBlockPlugin(md: MarkdownIt) {
   // 1つの段落にまとめられてしまい検出できないため、
   // ブロックパース段階でソース行を直接走査する。
 
-  md.block.ruler.before('fence', 'qiita_note', (state, startLine, endLine, silent) => {
-    const pos = state.bMarks[startLine] + state.tShift[startLine];
-    const max = state.eMarks[startLine];
-    const lineText = state.src.slice(pos, max).trim();
+  md.block.ruler.before(
+    'fence',
+    'qiita_note',
+    (state, startLine, endLine, silent) => {
+      const pos = state.bMarks[startLine] + state.tShift[startLine];
+      const max = state.eMarks[startLine];
+      const lineText = state.src.slice(pos, max).trim();
 
-    // :::note [info|warn|alert]
-    const openMatch = lineText.match(/^:::note\s*(info|warn|alert)?$/);
-    if (!openMatch) return false;
+      // :::note [info|warn|alert]
+      const openMatch = lineText.match(/^:::note\s*(info|warn|alert)?$/);
+      if (!openMatch) return false;
 
-    // 閉じ ::: を探す（コードフェンス内の ::: は無視）
-    let nextLine = startLine + 1;
-    let found = false;
-    let inFence = false;
+      // 閉じ ::: を探す（コードフェンス内の ::: は無視）
+      let nextLine = startLine + 1;
+      let found = false;
+      let inFence = false;
 
-    for (; nextLine < endLine; nextLine++) {
-      const linePos = state.bMarks[nextLine] + state.tShift[nextLine];
-      const lineMax = state.eMarks[nextLine];
-      const line = state.src.slice(linePos, lineMax).trim();
+      for (; nextLine < endLine; nextLine++) {
+        const linePos = state.bMarks[nextLine] + state.tShift[nextLine];
+        const lineMax = state.eMarks[nextLine];
+        const line = state.src.slice(linePos, lineMax).trim();
 
-      // コードフェンスの開閉を追跡
-      if (line.startsWith('```') || line.startsWith('~~~')) {
-        inFence = !inFence;
-        continue;
+        // コードフェンスの開閉を追跡
+        if (line.startsWith('```') || line.startsWith('~~~')) {
+          inFence = !inFence;
+          continue;
+        }
+
+        if (!inFence && line === ':::') {
+          found = true;
+          break;
+        }
       }
 
-      if (!inFence && line === ':::') {
-        found = true;
-        break;
-      }
-    }
+      if (!found) return false;
+      if (silent) return true;
 
-    if (!found) return false;
-    if (silent) return true;
+      const subtype = openMatch[1] || 'info';
+      const iconClass =
+        subtype === 'warn'
+          ? 'qiita-note-icon-warn'
+          : subtype === 'alert'
+            ? 'qiita-note-icon-alert'
+            : 'qiita-note-icon-info';
 
-    const subtype = openMatch[1] || 'info';
-    const iconClass =
-      subtype === 'warn'
-        ? 'qiita-note-icon-warn'
-        : subtype === 'alert'
-          ? 'qiita-note-icon-alert'
-          : 'qiita-note-icon-info';
+      // 開始 HTML トークン
+      let token = state.push('html_block', '', 0);
+      token.content = `<div class="qiita-note qiita-note-${subtype}"><span class="${iconClass}"></span><div class="qiita-note-content">\n`;
+      token.map = [startLine, startLine + 1];
 
-    // 開始 HTML トークン
-    let token = state.push('html_block', '', 0);
-    token.content = `<div class="qiita-note qiita-note-${subtype}"><span class="${iconClass}"></span><div class="qiita-note-content">\n`;
-    token.map = [startLine, startLine + 1];
+      // 内部コンテンツを再帰的にパース
+      const oldParent = state.parentType;
+      const oldLineMax = state.lineMax;
+      state.parentType = 'blockquote' as any;
+      state.lineMax = nextLine;
 
-    // 内部コンテンツを再帰的にパース
-    const oldParent = state.parentType;
-    const oldLineMax = state.lineMax;
-    state.parentType = 'blockquote' as any;
-    state.lineMax = nextLine;
+      state.md.block.tokenize(state, startLine + 1, nextLine);
 
-    state.md.block.tokenize(state, startLine + 1, nextLine);
+      state.parentType = oldParent;
+      state.lineMax = oldLineMax;
 
-    state.parentType = oldParent;
-    state.lineMax = oldLineMax;
+      // 終了 HTML トークン
+      token = state.push('html_block', '', 0);
+      token.content = '</div></div>\n';
+      token.map = [nextLine, nextLine + 1];
 
-    // 終了 HTML トークン
-    token = state.push('html_block', '', 0);
-    token.content = '</div></div>\n';
-    token.map = [nextLine, nextLine + 1];
-
-    state.line = nextLine + 1;
-    return true;
-  });
+      state.line = nextLine + 1;
+      return true;
+    },
+  );
 }
 
 // =====================================================================
@@ -243,59 +247,68 @@ function footnotePlugin(md: MarkdownIt) {
   // 脚注参照: [^label] をインラインリンクに変換
 
   // --- ブロックルール: 脚注定義を収集 ---
-  md.block.ruler.before('reference', 'qiita_footnote_def', (state, startLine, endLine, silent) => {
-    const pos = state.bMarks[startLine] + state.tShift[startLine];
-    const max = state.eMarks[startLine];
-    const lineText = state.src.slice(pos, max);
+  md.block.ruler.before(
+    'reference',
+    'qiita_footnote_def',
+    (state, startLine, endLine, silent) => {
+      const pos = state.bMarks[startLine] + state.tShift[startLine];
+      const max = state.eMarks[startLine];
+      const lineText = state.src.slice(pos, max);
 
-    // [^label]: で始まる行を検出
-    const match = lineText.match(/^\[\^([^\]]+)\]:\s+(.*)/);
-    if (!match) return false;
-    if (silent) return true;
+      // [^label]: で始まる行を検出
+      const match = lineText.match(/^\[\^([^\]]+)\]:\s+(.*)/);
+      if (!match) return false;
+      if (silent) return true;
 
-    const label = match[1];
-    const firstLineContent = match[2];
+      const label = match[1];
+      const firstLineContent = match[2];
 
-    // 複数行の脚注定義を収集（次行がインデントされている場合）
-    let content = firstLineContent;
-    let nextLine = startLine + 1;
-    while (nextLine < endLine) {
-      const nextPos = state.bMarks[nextLine] + state.tShift[nextLine];
-      const nextMax = state.eMarks[nextLine];
-      const nextText = state.src.slice(nextPos, nextMax);
+      // 複数行の脚注定義を収集（次行がインデントされている場合）
+      let content = firstLineContent;
+      let nextLine = startLine + 1;
+      while (nextLine < endLine) {
+        const nextPos = state.bMarks[nextLine] + state.tShift[nextLine];
+        const nextMax = state.eMarks[nextLine];
+        const nextText = state.src.slice(nextPos, nextMax);
 
-      // インデントが2スペース以上 or タブなら継続行
-      const rawLineStart = state.bMarks[nextLine];
-      const rawPrefix = state.src.slice(rawLineStart, nextPos);
-      if (rawPrefix.length < 2 && rawPrefix.indexOf('\t') === -1 && nextText.length > 0) break;
-      if (nextText.length === 0) {
-        // 空行は許容するが、次の行もチェック
-        content += '\n';
+        // インデントが2スペース以上 or タブなら継続行
+        const rawLineStart = state.bMarks[nextLine];
+        const rawPrefix = state.src.slice(rawLineStart, nextPos);
+        if (
+          rawPrefix.length < 2 &&
+          rawPrefix.indexOf('\t') === -1 &&
+          nextText.length > 0
+        )
+          break;
+        if (nextText.length === 0) {
+          // 空行は許容するが、次の行もチェック
+          content += '\n';
+          nextLine++;
+          continue;
+        }
+
+        content += '\n' + nextText;
         nextLine++;
-        continue;
       }
 
-      content += '\n' + nextText;
-      nextLine++;
-    }
+      // 脚注定義を env に保存（レンダリング時に参照）
+      if (!state.env.footnotes) state.env.footnotes = {};
+      if (!state.env.footnoteOrder) state.env.footnoteOrder = [];
+      state.env.footnotes[label] = content.trim();
+      if (state.env.footnoteOrder.indexOf(label) === -1) {
+        state.env.footnoteOrder.push(label);
+      }
 
-    // 脚注定義を env に保存（レンダリング時に参照）
-    if (!state.env.footnotes) state.env.footnotes = {};
-    if (!state.env.footnoteOrder) state.env.footnoteOrder = [];
-    state.env.footnotes[label] = content.trim();
-    if (state.env.footnoteOrder.indexOf(label) === -1) {
-      state.env.footnoteOrder.push(label);
-    }
+      // 空のトークンを生成（脚注定義自体は表示しない）
+      const token = state.push('footnote_def', '', 0);
+      token.meta = { label };
+      token.map = [startLine, nextLine];
+      token.hidden = true;
 
-    // 空のトークンを生成（脚注定義自体は表示しない）
-    const token = state.push('footnote_def', '', 0);
-    token.meta = { label };
-    token.map = [startLine, nextLine];
-    token.hidden = true;
-
-    state.line = nextLine;
-    return true;
-  });
+      state.line = nextLine;
+      return true;
+    },
+  );
 
   // --- インラインルール: [^label] を脚注参照に変換 ---
   md.inline.ruler.after('image', 'qiita_footnote_ref', (state, silent) => {
@@ -304,12 +317,12 @@ function footnotePlugin(md: MarkdownIt) {
     const max = state.posMax;
 
     if (pos + 2 >= max) return false;
-    if (src.charCodeAt(pos) !== 0x5B /* [ */) return false;
-    if (src.charCodeAt(pos + 1) !== 0x5E /* ^ */) return false;
+    if (src.charCodeAt(pos) !== 0x5b /* [ */) return false;
+    if (src.charCodeAt(pos + 1) !== 0x5e /* ^ */) return false;
 
     // ラベルの終端 ] を探す
     let labelEnd = pos + 2;
-    while (labelEnd < max && src.charCodeAt(labelEnd) !== 0x5D /* ] */) {
+    while (labelEnd < max && src.charCodeAt(labelEnd) !== 0x5d /* ] */) {
       labelEnd++;
     }
     if (labelEnd >= max) return false;
@@ -347,7 +360,8 @@ function footnotePlugin(md: MarkdownIt) {
 
     // ドキュメント末尾に脚注セクションを追加
     const openToken = new state.Token('html_block', '', 0);
-    openToken.content = '<section class="qiita-footnotes"><hr class="qiita-footnotes-sep">\n<ol class="qiita-footnotes-list">\n';
+    openToken.content =
+      '<section class="qiita-footnotes"><hr class="qiita-footnotes-sep">\n<ol class="qiita-footnotes-list">\n';
     state.tokens.push(openToken);
 
     for (let i = 0; i < order.length; i++) {
@@ -355,7 +369,7 @@ function footnotePlugin(md: MarkdownIt) {
       const content = footnotes[label] || label;
 
       const itemToken = new state.Token('html_block', '', 0);
-      const renderedContent = md.renderInline(content, state.env);
+      const renderedContent = md.renderInline(content, {});
       itemToken.content =
         `<li id="fn-${escapeHtml(label)}" class="qiita-footnote-item">` +
         `<p>${renderedContent} ` +
@@ -416,7 +430,8 @@ const EMBED_SERVICES: EmbedService[] = [
   {
     name: 'YouTube',
     icon: '▶',
-    pattern: /^https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]+)/,
+    pattern:
+      /^https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]+)/,
     extract: (url) => {
       const m = url.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]+)/);
       return m ? { id: m[1] } : null;
@@ -556,7 +571,11 @@ function renderServiceCard(
   const escapedUrl = escapeHtml(url);
 
   // YouTube はサムネイルを表示
-  if (service.name === 'YouTube' && info?.id && /^[A-Za-z0-9_-]+$/.test(info.id)) {
+  if (
+    service.name === 'YouTube' &&
+    info?.id &&
+    /^[A-Za-z0-9_-]+$/.test(info.id)
+  ) {
     return (
       `<div class="qiita-embed qiita-embed-youtube">` +
       `<a href="${escapedUrl}" class="qiita-embed-link" title="${escapeHtml(service.name)}">` +
