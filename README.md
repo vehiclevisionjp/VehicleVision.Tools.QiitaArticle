@@ -71,17 +71,17 @@ unzip qiita-tools.zip -d .
 
 ZIP に含まれるファイル:
 
-| ファイル / ディレクトリ                          | 用途                                    |
-| ------------------------------------------------ | --------------------------------------- |
-| `.markdownlint-cli2.jsonc`                       | markdownlint 設定                       |
-| `.markdownlint-rules/`                           | Qiita 固有 Lint ルール（7 ルール）      |
-| `.prettierrc`                                    | Prettier フォーマット設定               |
-| `package.json`                                   | Lint / Format 依存パッケージ定義        |
-| `.vscode/extensions.json`                        | 推奨拡張の自動提案設定                  |
-| `.vscode/tasks.json`                             | VS Code タスク定義                      |
-| `scripts/`                                       | 記事管理 PowerShell スクリプト          |
-| `.github/workflows/push-publish.yml.sample`      | push 時自動公開ワークフロー（サンプル） |
-| `.github/workflows/scheduled-publish.yml.sample` | 予約投稿ワークフロー（サンプル）        |
+| ファイル / ディレクトリ                   | 用途                               |
+| ----------------------------------------- | ---------------------------------- |
+| `.markdownlint-cli2.jsonc`                | markdownlint 設定                  |
+| `.markdownlint-rules/`                    | Qiita 固有 Lint ルール（7 ルール） |
+| `.prettierrc`                             | Prettier フォーマット設定          |
+| `package.json`                            | Lint / Format 依存パッケージ定義   |
+| `.vscode/extensions.json`                 | 推奨拡張の自動提案設定             |
+| `.vscode/tasks.json`                      | VS Code タスク定義                 |
+| `scripts/`                                | 記事管理 PowerShell スクリプト     |
+| `.github/workflows/push-publish.yml`      | push 時自動公開ワークフロー        |
+| `.github/workflows/scheduled-publish.yml` | 予約投稿ワークフロー               |
 
 ### 3. 依存パッケージのインストール
 
@@ -91,14 +91,7 @@ npm install
 
 ### 4. GitHub Actions の有効化（自動公開を使う場合）
 
-サンプルワークフローをリネームして有効化します:
-
-```bash
-mv .github/workflows/push-publish.yml.sample .github/workflows/push-publish.yml
-mv .github/workflows/scheduled-publish.yml.sample .github/workflows/scheduled-publish.yml
-```
-
-次に、リポジトリの **Settings → Secrets and variables → Actions** で以下の Secrets を設定します:
+リポジトリの **Settings → Secrets and variables → Actions** で以下の Secrets を設定します:
 
 | Secret 名     | 用途                       | 必須 |
 | ------------- | -------------------------- | ---- |
@@ -254,8 +247,8 @@ VS Code の「タスクの実行」（`Ctrl+Shift+P` → `Tasks: Run Task`）か
 │   │   ├── Sync-ArticleDates.ps1
 │   │   └── Add-CreatedAt.ps1
 │   └── .github/workflows/
-│       ├── push-publish.yml.sample    # 記事自動公開（ユーザー向けサンプル）
-│       └── scheduled-publish.yml.sample # 予約投稿（ユーザー向けサンプル）
+│       ├── push-publish.yml              # 記事自動公開（ユーザー向け）
+│       └── scheduled-publish.yml         # 予約投稿（ユーザー向け）
 ├── scripts/               # 開発用スクリプト
 │   ├── Build-CalendarExtension.ps1    # ローカルビルド用
 │   └── Build-MarkdownPreview.ps1      # ローカルビルド用
@@ -269,7 +262,7 @@ VS Code の「タスクの実行」（`Ctrl+Shift+P` → `Tasks: Run Task`）か
 
 ## GitHub Actions ワークフロー（ユーザーリポジトリ向け）
 
-`qiita-tools.zip` に含まれるサンプルワークフローを記事リポジトリに配置して使います。
+`qiita-tools.zip` に含まれるワークフローを記事リポジトリに配置して使います。
 
 ### push-publish.yml — push 時の自動公開
 
@@ -285,12 +278,18 @@ VS Code の「タスクの実行」（`Ctrl+Shift+P` → `Tasks: Run Task`）か
 **処理ステップ:**
 
 ```
-checkout → publish → created_at 追加
+checkout → publish → commit/push (リトライ付き) → created_at 追加 → 通知
 ```
 
 ### scheduled-publish.yml — 予約投稿の定期チェック
 
 毎日定時に実行され、`scheduled_publish` の日付が到来した記事を自動公開します。
+
+**処理ステップ:**
+
+```
+checkout → 予約日チェック → ignorePublish 解除 → publish → created_at 追加 → 通知
+```
 
 **スケジュール:**
 
@@ -301,7 +300,7 @@ checkout → publish → created_at 追加
 
 ### 通知のカスタマイズ（任意）
 
-サンプルワークフローには通知ステップがコメントアウトされた状態で含まれています。
+ワークフローには通知ステップがコメントアウトされた状態で含まれています。
 使用したいサービスのコメントを外し、対応する Secret を設定するだけで通知が有効になります。
 
 | サービス        | 必要な Secret                            |
@@ -324,7 +323,7 @@ checkout → publish → created_at 追加
       -d "{\"text\": \"${{ steps.articles.outputs.message }}\"}"
 ```
 
-> 各サービスの設定例はサンプルワークフローファイル内のコメントを参照してください。
+> 各サービスの設定例はワークフローファイル内のコメントを参照してください。
 
 ---
 
