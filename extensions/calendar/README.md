@@ -1,6 +1,6 @@
-# Qiita 記事カレンダー（VS Code 拡張機能）
+# Qiita 記事カレンダー
 
-Qiita 記事の投稿スケジュールをカレンダー形式で管理する VS Code Webview 拡張機能です。
+Qiita 記事の投稿スケジュールをカレンダー形式で管理する VS Code 拡張機能です。
 
 ## 機能
 
@@ -10,14 +10,14 @@ Qiita 記事の投稿スケジュールをカレンダー形式で管理する V
 - **新規記事作成** — カレンダー上から公開 / 限定共有 / 予約投稿を作成（ブランチ自動作成対応）
 - **ドラッグ＆ドロップ** — 予約投稿・下書き記事の日付を D&D で変更
 - **Git 操作** — コミット / コミット＆プッシュ / マージ＆プッシュをカレンダー内で実行
-- **祝日表示** — 日本の祝日を [holidays-jp API](https://github.com/holidays-jp) から自動取得して表示（年単位でキャッシュ）
+- **祝日表示** — 日本の祝日を自動取得して表示（年単位でキャッシュ）
 - **キーボードナビゲーション** — ← → キーで週移動、Escape でモーダルを閉じる
 
 ## 表示方法
 
 ### 自動表示（デフォルト）
 
-ワークスペースに `public/` ディレクトリが存在する場合、ワークスペースを開いた時点で自動的にカレンダーが表示されます。
+ワークスペースに `qiita.config.json` または `public/` ディレクトリが存在する場合、ワークスペースを開いた時点で自動的にカレンダーが表示されます。
 
 ### 手動表示
 
@@ -51,63 +51,10 @@ Qiita: 記事カレンダーを開く
 
 カレンダーの表示範囲に含まれる年の日本の祝日を外部 API から自動取得し、該当日にラベルを表示します。
 
-| 項目           | 内容                                                                                                     |
-| -------------- | -------------------------------------------------------------------------------------------------------- |
-| データソース   | [holidays-jp](https://github.com/holidays-jp)（`https://holidays-jp.github.io/api/v1/{year}/date.json`） |
-| 取得タイミング | カレンダーの描画時に、表示範囲に含まれる年を自動判定して取得                                             |
-| キャッシュ     | 年単位のインメモリキャッシュ（同じ年の再リクエストは発生しない）                                         |
-| エラー時の動作 | カレンダー上部にエラーバナーを表示（カレンダー自体は引き続き利用可能）                                   |
-| ネットワーク   | 初回取得時にインターネット接続が必要（取得後はキャッシュで動作）                                         |
-
-> 祝日 API はオープンソースの [holidays-jp](https://github.com/holidays-jp) プロジェクトが提供する静的 JSON を使用しています。API の利用に認証は不要です。
-
-## ビルド・インストール
-
-```bash
-cd tools/VehicleVision.Tools.QiitaArticle.Calendar
-
-# 依存関係のインストール
-npm install
-
-# ビルド → パッケージ → インストール（一括）
-npm run install-ext
-```
-
-個別に実行する場合:
-
-```bash
-# TypeScript ビルド
-npm run build
-
-# VSIX パッケージ作成
-npx @vscode/vsce package --no-dependencies --allow-missing-repository
-
-# 拡張機能インストール
-code --install-extension article-calendar-0.0.1.vsix --force
-```
-
-インストール後、VS Code を再読み込み（`Ctrl+Shift+P` → `Reload Window`）してください。
-
-## ディレクトリ構成
-
-```
-VehicleVision.Tools.QiitaArticle.Calendar/
-├── src/
-│   ├── extension.ts       # 拡張機能エントリポイント（コマンド登録・自動起動）
-│   ├── calendarPanel.ts   # Webview パネル管理（HTML テンプレート・メッセージルーティング）
-│   ├── articleParser.ts   # 記事ファイルパーサー（Front Matter 解析）
-│   ├── gitService.ts      # Git 操作（commit / merge / push / branch / status）
-│   └── holidayService.ts  # 祝日取得（holidays-jp.github.io からキャッシュ付き取得）
-├── media/
-│   ├── app.js             # Webview フロントエンド（カレンダー・グラフ・モーダル）
-│   └── style.css          # Webview スタイルシート
-├── dist/                  # ビルド出力（esbuild）
-├── package.json           # 拡張機能マニフェスト
-└── tsconfig.json          # TypeScript 設定
-```
+- 初回取得時にインターネット接続が必要です（取得後はキャッシュで動作）
+- 取得に失敗した場合、カレンダー上部にエラーバナーを表示します（カレンダー自体は引き続き利用可能）
 
 ## 動作要件
 
 - VS Code 1.85.0 以上
-- Node.js 20.0.0 以上（ビルド時）
-- ワークスペースに `public/` ディレクトリが存在すること
+- ワークスペースに `qiita.config.json` または `public/` ディレクトリが存在すること

@@ -22,10 +22,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '20'
 
@@ -112,7 +112,7 @@ jobs:
               CHANGED=true
             fi
             sleep 1
-          done < <(find public -name '*.md' -not -path 'public/.remote/*')
+          done < <(find public -name '*.md' -not -path 'public/.remote/*' | sort)
 
           if [ "$CHANGED" = true ]; then
             git config user.name "github-actions[bot]"
@@ -186,6 +186,7 @@ jobs:
               continue
             fi
             ARTICLE_ID=$(grep -oP '(?<=^id: ).*' "$file" | tr -d '"' | tr -d "'")
+            [ "$ARTICLE_ID" = "null" ] && continue
             ARTICLE_TITLE=$(grep -oP '(?<=^title: ).*' "$file" | tr -d '"' | tr -d "'")
             if [ -n "$ARTICLE_ID" ] && [ -n "$ARTICLE_TITLE" ]; then
               MESSAGE="${MESSAGE}▶ ${ARTICLE_TITLE}\nhttps://qiita.com/items/${ARTICLE_ID}\n\n"

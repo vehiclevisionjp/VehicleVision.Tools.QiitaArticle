@@ -24,13 +24,15 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     timeout-minutes: 15
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '20'
 
@@ -43,13 +45,27 @@ jobs:
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "New version: $NEW_VERSION"
 
+      # ── 拡張機能の package.json バージョンをリリースと統一 ──
+      - name: Sync extension versions
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.new_version }}"
+          for pkg in extensions/calendar/package.json extensions/markdown-preview/package.json; do
+            node -e "
+              const fs = require('fs');
+              const raw = fs.readFileSync('$pkg', 'utf8');
+              const obj = JSON.parse(raw);
+              obj.version = process.argv[1];
+              fs.writeFileSync('$pkg', JSON.stringify(obj, null, 2) + '\n');
+            " "$NEW_VERSION"
+          done
+
       # ── Calendar 拡張のビルド ──────────────────────────────
       - name: Build Calendar extension
         working-directory: extensions/calendar
         run: |
           npm install
           npm run build
-          npx --yes @vscode/vsce package --no-dependencies --allow-missing-repository \
+          npx --yes @vscode/vsce package --no-dependencies \
             -o VehicleVision.Tools.QiitaArticle.Calendar.vsix
 
       # ── MarkdownPreview 拡張のビルド ──────────────────────
@@ -58,7 +74,7 @@ jobs:
         run: |
           npm install
           npm run build
-          npx --yes @vscode/vsce package --no-dependencies --allow-missing-repository \
+          npx --yes @vscode/vsce package --no-dependencies \
             -o VehicleVision.Tools.QiitaArticle.MarkdownPreview.vsix
 
       # ── lint/ツールファイルを ZIP にまとめる ──────────────
@@ -67,12 +83,23 @@ jobs:
           cd qiita-tools
           zip -r ../qiita-tools.zip .
 
+      # ── VS Code Marketplace へ公開 ────────────────────────
+      - name: Publish to VS Code Marketplace
+        if: vars.VSCE_PUBLISH == 'true'
+        run: |
+          npx --yes @vscode/vsce publish \
+            --packagePath extensions/calendar/VehicleVision.Tools.QiitaArticle.Calendar.vsix
+          npx --yes @vscode/vsce publish \
+            --packagePath extensions/markdown-preview/VehicleVision.Tools.QiitaArticle.MarkdownPreview.vsix
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
       # ── バージョンコミット・タグ作成 ────────────────────────
       - name: Commit version update and create tag
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add package.json
+          git add package.json extensions/calendar/package.json extensions/markdown-preview/package.json
           git commit -m "chore: bump version to v${{ steps.new_version.outputs.new_version }}"
           git tag "v${{ steps.new_version.outputs.new_version }}"
           git push origin HEAD "v${{ steps.new_version.outputs.new_version }}"

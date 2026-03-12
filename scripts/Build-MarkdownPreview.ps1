@@ -100,7 +100,7 @@ try {
     # 固定名の既存ファイルも削除
     $vsixPath = Join-Path $extensionDir $vsixFile
     if (Test-Path $vsixPath) { Remove-Item -Path $vsixPath -Force }
-    npx --yes @vscode/vsce package --no-dependencies --allow-missing-repository -o $vsixFile
+    npx --yes @vscode/vsce package --no-dependencies -o $vsixFile
     if ($LASTEXITCODE -ne 0) { throw 'パッケージングに失敗しました。' }
 
     # インストール

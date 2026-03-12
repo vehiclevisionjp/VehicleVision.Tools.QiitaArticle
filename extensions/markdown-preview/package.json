@@ -1,10 +1,14 @@
 {
-  "name": "vehiclevision-tools-qiitaarticle-markdownpreview",
-  "displayName": "Qiita Markdown Preview",
+  "name": "VehicleVision-Tools-QiitaArticle-MarkdownPreview",
+  "displayName": "VehicleVision.Tools.QiitaArticle.MarkdownPreview",
   "license": "AGPL-3.0-only",
   "description": "VS Code の Markdown プレビューを Qiita 固有の構文（:::note, lang:filename, 数式等）に対応させる拡張機能",
-  "version": "2026.305.950",
-  "publisher": "local",
+  "version": "0.0.8",
+  "publisher": "PMCCoLtdITSolutionDiv",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vehiclevisionjp/VehicleVision.Tools.QiitaArticle"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },

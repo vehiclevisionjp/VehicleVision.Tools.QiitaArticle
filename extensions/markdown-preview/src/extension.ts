@@ -11,6 +11,8 @@ import type MarkdownIt from 'markdown-it';
  * - ```math 数式ブロック（KaTeX 連携）
  * - インラインカラーコード (#FFF, rgb(), hsl())
  * - 改行の自動 <br> 変換 (HARDBREAKS)
+ * - 脚注 [^1] (footnotes)
+ * - 埋め込みコンテンツ (YouTube, Twitter/X, CodePen, Gist 等)
  */
 export function activate() {
   return {
@@ -29,6 +31,12 @@ export function activate() {
 
       // インラインカラーコード
       inlineColorPlugin(md);
+
+      // 脚注
+      footnotePlugin(md);
+
+      // 埋め込みコンテンツ
+      embedPlugin(md);
 
       return md;
     },
@@ -224,6 +232,375 @@ function inlineColorPlugin(md: MarkdownIt) {
 
     return rendered;
   };
+}
+
+// =====================================================================
+// 脚注 [^1] (footnotes)
+// =====================================================================
+
+function footnotePlugin(md: MarkdownIt) {
+  // 脚注定義: [^label]: 本文 を収集
+  // 脚注参照: [^label] をインラインリンクに変換
+
+  // --- ブロックルール: 脚注定義を収集 ---
+  md.block.ruler.before('reference', 'qiita_footnote_def', (state, startLine, endLine, silent) => {
+    const pos = state.bMarks[startLine] + state.tShift[startLine];
+    const max = state.eMarks[startLine];
+    const lineText = state.src.slice(pos, max);
+
+    // [^label]: で始まる行を検出
+    const match = lineText.match(/^\[\^([^\]]+)\]:\s+(.*)/);
+    if (!match) return false;
+    if (silent) return true;
+
+    const label = match[1];
+    const firstLineContent = match[2];
+
+    // 複数行の脚注定義を収集（次行がインデントされている場合）
+    let content = firstLineContent;
+    let nextLine = startLine + 1;
+    while (nextLine < endLine) {
+      const nextPos = state.bMarks[nextLine] + state.tShift[nextLine];
+      const nextMax = state.eMarks[nextLine];
+      const nextText = state.src.slice(nextPos, nextMax);
+
+      // インデントが2スペース以上 or タブなら継続行
+      const rawLineStart = state.bMarks[nextLine];
+      const rawPrefix = state.src.slice(rawLineStart, nextPos);
+      if (rawPrefix.length < 2 && rawPrefix.indexOf('\t') === -1 && nextText.length > 0) break;
+      if (nextText.length === 0) {
+        // 空行は許容するが、次の行もチェック
+        content += '\n';
+        nextLine++;
+        continue;
+      }
+
+      content += '\n' + nextText;
+      nextLine++;
+    }
+
+    // 脚注定義を env に保存（レンダリング時に参照）
+    if (!state.env.footnotes) state.env.footnotes = {};
+    if (!state.env.footnoteOrder) state.env.footnoteOrder = [];
+    state.env.footnotes[label] = content.trim();
+    if (state.env.footnoteOrder.indexOf(label) === -1) {
+      state.env.footnoteOrder.push(label);
+    }
+
+    // 空のトークンを生成（脚注定義自体は表示しない）
+    const token = state.push('footnote_def', '', 0);
+    token.meta = { label };
+    token.map = [startLine, nextLine];
+    token.hidden = true;
+
+    state.line = nextLine;
+    return true;
+  });
+
+  // --- インラインルール: [^label] を脚注参照に変換 ---
+  md.inline.ruler.after('image', 'qiita_footnote_ref', (state, silent) => {
+    const src = state.src;
+    const pos = state.pos;
+    const max = state.posMax;
+
+    if (pos + 2 >= max) return false;
+    if (src.charCodeAt(pos) !== 0x5B /* [ */) return false;
+    if (src.charCodeAt(pos + 1) !== 0x5E /* ^ */) return false;
+
+    // ラベルの終端 ] を探す
+    let labelEnd = pos + 2;
+    while (labelEnd < max && src.charCodeAt(labelEnd) !== 0x5D /* ] */) {
+      labelEnd++;
+    }
+    if (labelEnd >= max) return false;
+    if (labelEnd === pos + 2) return false; // 空ラベル
+
+    const label = src.slice(pos + 2, labelEnd);
+
+    if (silent) {
+      state.pos = labelEnd + 1;
+      return true;
+    }
+
+    // 脚注参照トークンを生成
+    const token = state.push('footnote_ref', '', 0);
+    token.meta = { label };
+
+    // 参照順序を記録
+    if (!state.env.footnoteOrder) state.env.footnoteOrder = [];
+    if (state.env.footnoteOrder.indexOf(label) === -1) {
+      state.env.footnoteOrder.push(label);
+    }
+
+    state.pos = labelEnd + 1;
+    return true;
+  });
+
+  // --- コアルール: 脚注セクションをドキュメント末尾に追加 ---
+  md.core.ruler.after('inline', 'qiita_footnote_tail', (state) => {
+    const footnotes = state.env.footnotes;
+    const order = state.env.footnoteOrder;
+    if (!footnotes || !order || order.length === 0) return;
+
+    // 脚注定義トークン（hidden）を除去
+    state.tokens = state.tokens.filter((t) => t.type !== 'footnote_def');
+
+    // ドキュメント末尾に脚注セクションを追加
+    const openToken = new state.Token('html_block', '', 0);
+    openToken.content = '<section class="qiita-footnotes"><hr class="qiita-footnotes-sep">\n<ol class="qiita-footnotes-list">\n';
+    state.tokens.push(openToken);
+
+    for (let i = 0; i < order.length; i++) {
+      const label = order[i];
+      const content = footnotes[label] || label;
+
+      const itemToken = new state.Token('html_block', '', 0);
+      const renderedContent = md.renderInline(content, state.env);
+      itemToken.content =
+        `<li id="fn-${escapeHtml(label)}" class="qiita-footnote-item">` +
+        `<p>${renderedContent} ` +
+        `<a href="#fnref-${escapeHtml(label)}" class="qiita-footnote-backref" title="戻る">↩</a></p></li>\n`;
+      state.tokens.push(itemToken);
+    }
+
+    const closeToken = new state.Token('html_block', '', 0);
+    closeToken.content = '</ol>\n</section>\n';
+    state.tokens.push(closeToken);
+  });
+
+  // --- レンダラー: 脚注参照をリンクとして描画 ---
+  md.renderer.rules.footnote_ref = (tokens, idx) => {
+    const label = tokens[idx].meta.label;
+    const order: string[] = tokens[idx].meta.order || [];
+    let num = order.indexOf(label) + 1;
+    if (num === 0) num = parseInt(label, 10) || 1;
+
+    return (
+      `<sup class="qiita-footnote-ref">` +
+      `<a href="#fn-${escapeHtml(label)}" id="fnref-${escapeHtml(label)}">${num}</a></sup>`
+    );
+  };
+
+  // コアルールで footnoteOrder を参照トークンに渡す
+  md.core.ruler.after('qiita_footnote_tail', 'qiita_footnote_env', (state) => {
+    const order = state.env.footnoteOrder;
+    if (!order) return;
+    for (const token of state.tokens) {
+      if (token.type === 'inline' && token.children) {
+        for (const child of token.children) {
+          if (child.type === 'footnote_ref') {
+            child.meta.order = order;
+          }
+        }
+      }
+    }
+  });
+}
+
+// =====================================================================
+// 埋め込みコンテンツ (URL → サービス別プレビューカード)
+// =====================================================================
+
+/**
+ * 対応サービス一覧（Qiita 公式の埋め込み可能コンテンツに準拠）
+ * @see https://qiita.com/Qiita/items/612e2e149b9f9451c144
+ */
+interface EmbedService {
+  name: string;
+  icon: string;
+  pattern: RegExp;
+  extract?: (url: string) => { id?: string } | null;
+}
+
+const EMBED_SERVICES: EmbedService[] = [
+  {
+    name: 'YouTube',
+    icon: '▶',
+    pattern: /^https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]+)/,
+    extract: (url) => {
+      const m = url.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]+)/);
+      return m ? { id: m[1] } : null;
+    },
+  },
+  {
+    name: 'X (Twitter)',
+    icon: '𝕏',
+    pattern: /^https?:\/\/(?:twitter\.com|x\.com)\/[^/]+\/status\/\d+/,
+  },
+  {
+    name: 'GitHub Gist',
+    icon: '📋',
+    pattern: /^https?:\/\/gist\.github\.com\/[^/]+\/[0-9a-f]+/,
+  },
+  {
+    name: 'CodeSandbox',
+    icon: '📦',
+    pattern: /^https?:\/\/codesandbox\.io\//,
+  },
+  {
+    name: 'CodePen',
+    icon: '✏️',
+    pattern: /^https?:\/\/codepen\.io\//,
+  },
+  {
+    name: 'Speaker Deck',
+    icon: '🎤',
+    pattern: /^https?:\/\/speakerdeck\.com\//,
+  },
+  {
+    name: 'SlideShare',
+    icon: '📊',
+    pattern: /^https?:\/\/www\.slideshare\.net\//,
+  },
+  {
+    name: 'Google Slides',
+    icon: '📊',
+    pattern: /^https?:\/\/docs\.google\.com\/presentation\//,
+  },
+  {
+    name: 'Docswell',
+    icon: '📑',
+    pattern: /^https?:\/\/(?:www\.)?docswell\.com\//,
+  },
+  {
+    name: 'Figma',
+    icon: '🎨',
+    pattern: /^https?:\/\/(?:www\.|embed\.)?figma\.com\//,
+  },
+  {
+    name: 'StackBlitz',
+    icon: '⚡',
+    pattern: /^https?:\/\/stackblitz\.com\//,
+  },
+  {
+    name: 'Asciinema',
+    icon: '🖥️',
+    pattern: /^https?:\/\/asciinema\.org\//,
+  },
+  {
+    name: 'blueprintUE',
+    icon: '🔵',
+    pattern: /^https?:\/\/blueprintue\.com\//,
+  },
+  {
+    name: 'Claude Artifacts',
+    icon: '🤖',
+    pattern: /^https?:\/\/claude\.site\//,
+  },
+  {
+    name: 'Google Drive',
+    icon: '📁',
+    pattern: /^https?:\/\/drive\.google\.com\//,
+  },
+];
+
+function embedPlugin(md: MarkdownIt) {
+  // コアルール: 段落内がURLのみの場合、埋め込みカードに変換する
+  md.core.ruler.after('inline', 'qiita_embed', (state) => {
+    const tokens = state.tokens;
+    const newTokens: typeof tokens = [];
+
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i];
+
+      // paragraph_open + inline + paragraph_close のパターンを検出
+      if (
+        token.type === 'paragraph_open' &&
+        i + 2 < tokens.length &&
+        tokens[i + 1].type === 'inline' &&
+        tokens[i + 2].type === 'paragraph_close'
+      ) {
+        const inlineToken = tokens[i + 1];
+        const content = inlineToken.content.trim();
+
+        // URL のみの段落かチェック
+        if (/^https?:\/\/\S+$/.test(content) && !content.includes(' ')) {
+          const embedHtml = renderEmbedCard(content);
+          if (embedHtml) {
+            // 埋め込みカードに変換
+            const htmlToken = new state.Token('html_block', '', 0);
+            htmlToken.content = embedHtml;
+            htmlToken.map = token.map;
+            newTokens.push(htmlToken);
+            i += 2; // paragraph_close をスキップ
+            continue;
+          }
+        }
+      }
+
+      newTokens.push(token);
+    }
+
+    state.tokens = newTokens;
+  });
+}
+
+function renderEmbedCard(url: string): string | null {
+  // 既知サービスの判定
+  for (const service of EMBED_SERVICES) {
+    if (service.pattern.test(url)) {
+      const info = service.extract ? service.extract(url) : null;
+      return renderServiceCard(service, url, info);
+    }
+  }
+
+  // 既知サービス以外の URL → リンクカード
+  return renderLinkCard(url);
+}
+
+function renderServiceCard(
+  service: EmbedService,
+  url: string,
+  info: { id?: string } | null,
+): string {
+  const escapedUrl = escapeHtml(url);
+
+  // YouTube はサムネイルを表示
+  if (service.name === 'YouTube' && info?.id && /^[A-Za-z0-9_-]+$/.test(info.id)) {
+    return (
+      `<div class="qiita-embed qiita-embed-youtube">` +
+      `<a href="${escapedUrl}" class="qiita-embed-link" title="${escapeHtml(service.name)}">` +
+      `<div class="qiita-embed-thumbnail" style="background-image: url('https://img.youtube.com/vi/${escapeHtml(info.id)}/hqdefault.jpg')">` +
+      `<span class="qiita-embed-play">▶</span>` +
+      `</div>` +
+      `<div class="qiita-embed-meta">` +
+      `<span class="qiita-embed-icon">${service.icon}</span>` +
+      `<span class="qiita-embed-service">${escapeHtml(service.name)}</span>` +
+      `<span class="qiita-embed-url">${escapedUrl}</span>` +
+      `</div>` +
+      `</a></div>\n`
+    );
+  }
+
+  return (
+    `<div class="qiita-embed qiita-embed-service">` +
+    `<a href="${escapedUrl}" class="qiita-embed-link" title="${escapeHtml(service.name)}">` +
+    `<span class="qiita-embed-icon">${service.icon}</span>` +
+    `<span class="qiita-embed-service">${escapeHtml(service.name)}</span>` +
+    `<span class="qiita-embed-url">${escapedUrl}</span>` +
+    `</a></div>\n`
+  );
+}
+
+function renderLinkCard(url: string): string {
+  const escapedUrl = escapeHtml(url);
+
+  // ドメイン名を表示
+  let domain = '';
+  try {
+    domain = new URL(url).hostname;
+  } catch {
+    domain = url;
+  }
+
+  return (
+    `<div class="qiita-embed qiita-embed-linkcard">` +
+    `<a href="${escapedUrl}" class="qiita-embed-link" title="${escapedUrl}">` +
+    `<span class="qiita-embed-icon">🔗</span>` +
+    `<span class="qiita-embed-service">${escapeHtml(domain)}</span>` +
+    `<span class="qiita-embed-url">${escapedUrl}</span>` +
+    `</a></div>\n`
+  );
 }
 
 // =====================================================================

@@ -22,10 +22,10 @@ jobs:
     env:
       TZ: Asia/Tokyo
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '20'
 
@@ -56,7 +56,7 @@ jobs:
             else
                 echo "Pending: $file (scheduled: $SCHEDULED)"
             fi
-          done < <(find public -name '*.md' -not -path 'public/.remote/*')
+          done < <(find public -name '*.md' -not -path 'public/.remote/*' | sort)
           echo "changed=$CHANGED" >> $GITHUB_OUTPUT
           echo "enabled_files<<EOF" >> $GITHUB_OUTPUT
           echo -e "$ENABLED_FILES" >> $GITHUB_OUTPUT
@@ -258,6 +258,7 @@ jobs:
               [ -z "$file" ] && continue
               [ -f "$file" ] || continue
               ARTICLE_ID=$(grep -oP '(?<=^id: ).*' "$file" | tr -d '"' | tr -d "'")
+              [ "$ARTICLE_ID" = "null" ] && continue
               ARTICLE_TITLE=$(grep -oP '(?<=^title: ).*' "$file" | tr -d '"' | tr -d "'")
               if [ -n "$ARTICLE_ID" ] && [ -n "$ARTICLE_TITLE" ]; then
                 PUBLISHED="${PUBLISHED}▶ ${ARTICLE_TITLE}\nhttps://qiita.com/items/${ARTICLE_ID}\n"
@@ -274,7 +275,7 @@ jobs:
                 UPCOMING="${UPCOMING}${SCHEDULED} - ${ARTICLE_TITLE}\n"
               fi
             fi
-          done < <(find public -name '*.md' -not -path 'public/.remote/*')
+          done < <(find public -name '*.md' -not -path 'public/.remote/*' | sort)
           MESSAGE="📝 Qiita 予約投稿レポート ($TODAY)\n\n"
           if [ -n "$PUBLISHED" ]; then
             MESSAGE="${MESSAGE}【本日投稿】\n${PUBLISHED}\n"
