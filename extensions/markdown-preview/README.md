@@ -27,7 +27,7 @@ puts "Hello"
 
 ### 数式ブロック
 
-`` ```math `` フェンスを KaTeX 向けトークンに変換します。  
+` ```math ` フェンスを KaTeX 向けトークンに変換します。  
 VS Code の KaTeX 拡張機能と組み合わせて数式をプレビューできます。
 
 ````markdown

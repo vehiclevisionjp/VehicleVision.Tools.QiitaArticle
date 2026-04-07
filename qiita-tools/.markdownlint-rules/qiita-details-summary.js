@@ -1,6 +1,6 @@
 // @ts-check
 
-"use strict";
+'use strict';
 
 /**
  * Qiita の Details/Summary（折りたたみ）構文を検証するカスタムルール
@@ -12,13 +12,13 @@
  * 参照: resources/qiita-markdown - lib/qiita/markdown/filters/final_sanitizer.rb
  */
 
-const { isPublicArticle } = require("./_helpers");
+const { isPublicArticle } = require('./_helpers');
 
 /** @type {import("markdownlint").Rule} */
 module.exports = {
-  names: ["qiita-details-summary", "QFM005"],
-  description: "<details> ブロックの構文が正しいこと",
-  tags: ["qiita", "html", "details"],
+  names: ['qiita-details-summary', 'QFM005'],
+  description: '<details> ブロックの構文が正しいこと',
+  tags: ['qiita', 'html', 'details'],
   function: function rule(params, onError) {
     if (!isPublicArticle(params.name)) return;
 
@@ -49,8 +49,7 @@ module.exports = {
         if (detailsStack.length === 0) {
           onError({
             lineNumber,
-            detail:
-              "対応する <details> がない </details> が見つかりました",
+            detail: '対応する <details> がない </details> が見つかりました',
           });
         } else {
           const open = detailsStack.pop();
@@ -58,7 +57,7 @@ module.exports = {
             onError({
               lineNumber: open.lineNumber,
               detail:
-                "<details> 内に <summary> がありません。折りたたみの見出しを追加してください",
+                '<details> 内に <summary> がありません。折りたたみの見出しを追加してください',
             });
           }
         }
@@ -69,8 +68,7 @@ module.exports = {
     for (const open of detailsStack) {
       onError({
         lineNumber: open.lineNumber,
-        detail:
-          "<details> が閉じられていません。</details> で閉じてください",
+        detail: '<details> が閉じられていません。</details> で閉じてください',
       });
     }
   },

@@ -78,13 +78,21 @@ describe('getStatus()', () => {
 
   it('returns files when there are changes', () => {
     // Use non-space first character to avoid output.trim() stripping the XY status prefix
-    mockedExecSync.mockReturnValue('M  public/article.md\nA  public/new.md\n' as any);
+    mockedExecSync.mockReturnValue(
+      'M  public/article.md\nA  public/new.md\n' as any,
+    );
     const result = git.getStatus();
     expect(result.success).toBe(true);
     expect(result.hasChanges).toBe(true);
     expect(result.files).toHaveLength(2);
-    expect(result.files[0]).toMatchObject({ status: 'M', path: 'public/article.md' });
-    expect(result.files[1]).toMatchObject({ status: 'A', path: 'public/new.md' });
+    expect(result.files[0]).toMatchObject({
+      status: 'M',
+      path: 'public/article.md',
+    });
+    expect(result.files[1]).toMatchObject({
+      status: 'A',
+      path: 'public/new.md',
+    });
   });
 
   it('returns success=false on git failure', () => {
@@ -126,8 +134,9 @@ describe('commit()', () => {
 
   it('returns error when staging fails', () => {
     mockedExecSync
-      .mockReturnValueOnce('M public/file.md' as any)  // status --porcelain
-      .mockImplementationOnce(() => {                   // add public/
+      .mockReturnValueOnce('M public/file.md' as any) // status --porcelain
+      .mockImplementationOnce(() => {
+        // add public/
         const err: any = new Error();
         err.stderr = 'add failed';
         throw err;
@@ -139,9 +148,10 @@ describe('commit()', () => {
 
   it('returns error when commit command fails', () => {
     mockedExecSync
-      .mockReturnValueOnce('M public/file.md' as any)  // status --porcelain
-      .mockReturnValueOnce('' as any)                   // add public/
-      .mockImplementationOnce(() => {                   // commit
+      .mockReturnValueOnce('M public/file.md' as any) // status --porcelain
+      .mockReturnValueOnce('' as any) // add public/
+      .mockImplementationOnce(() => {
+        // commit
         const err: any = new Error();
         err.stderr = 'commit failed';
         throw err;
@@ -153,8 +163,8 @@ describe('commit()', () => {
 
   it('success without push', () => {
     mockedExecSync
-      .mockReturnValueOnce('M public/file.md' as any)  // status --porcelain
-      .mockReturnValueOnce('' as any)                   // add public/
+      .mockReturnValueOnce('M public/file.md' as any) // status --porcelain
+      .mockReturnValueOnce('' as any) // add public/
       .mockReturnValueOnce('[main abc123] my commit' as any); // commit
     const result = git.commit('my commit');
     expect(result.success).toBe(true);
@@ -163,10 +173,10 @@ describe('commit()', () => {
 
   it('success with push', () => {
     mockedExecSync
-      .mockReturnValueOnce('M public/file.md' as any)  // status --porcelain
-      .mockReturnValueOnce('' as any)                   // add public/
+      .mockReturnValueOnce('M public/file.md' as any) // status --porcelain
+      .mockReturnValueOnce('' as any) // add public/
       .mockReturnValueOnce('[main abc123] my commit' as any) // commit
-      .mockReturnValueOnce('Everything up-to-date' as any);  // push
+      .mockReturnValueOnce('Everything up-to-date' as any); // push
     const result = git.commit('my commit', true);
     expect(result.success).toBe(true);
     expect(result.message).toContain('プッシュ');
@@ -174,10 +184,11 @@ describe('commit()', () => {
 
   it('returns error when push fails after successful commit', () => {
     mockedExecSync
-      .mockReturnValueOnce('M public/file.md' as any)  // status --porcelain
-      .mockReturnValueOnce('' as any)                   // add public/
+      .mockReturnValueOnce('M public/file.md' as any) // status --porcelain
+      .mockReturnValueOnce('' as any) // add public/
       .mockReturnValueOnce('[main abc123] my commit' as any) // commit
-      .mockImplementationOnce(() => {                   // push
+      .mockImplementationOnce(() => {
+        // push
         const err: any = new Error();
         err.stderr = 'push rejected';
         throw err;
@@ -193,9 +204,9 @@ describe('commit()', () => {
 describe('getBranchFiles()', () => {
   it('normalizes paths: strips public/ prefix and .md extension', () => {
     mockedExecSync
-      .mockReturnValueOnce('public/20230101-article.md' as any)  // diff main
-      .mockReturnValueOnce('' as any)                             // diff --cached
-      .mockReturnValueOnce('' as any);                            // ls-files
+      .mockReturnValueOnce('public/20230101-article.md' as any) // diff main
+      .mockReturnValueOnce('' as any) // diff --cached
+      .mockReturnValueOnce('' as any); // ls-files
     const result = git.getBranchFiles();
     expect(result.success).toBe(true);
     expect(result.files).toContain('20230101-article');
@@ -203,9 +214,9 @@ describe('getBranchFiles()', () => {
 
   it('deduplicates files across diff/staged/untracked', () => {
     mockedExecSync
-      .mockReturnValueOnce('public/20230101-dup.md' as any)   // diff main
-      .mockReturnValueOnce('public/20230101-dup.md' as any)   // diff --cached
-      .mockReturnValueOnce('public/20230101-dup.md' as any);  // ls-files
+      .mockReturnValueOnce('public/20230101-dup.md' as any) // diff main
+      .mockReturnValueOnce('public/20230101-dup.md' as any) // diff --cached
+      .mockReturnValueOnce('public/20230101-dup.md' as any); // ls-files
     const result = git.getBranchFiles();
     expect(result.files).toHaveLength(1);
     expect(result.files[0]).toBe('20230101-dup');
@@ -213,19 +224,23 @@ describe('getBranchFiles()', () => {
 
   it('merges files from all three sources', () => {
     mockedExecSync
-      .mockReturnValueOnce('public/20230101-a.md' as any)     // diff main
-      .mockReturnValueOnce('public/20230201-b.md' as any)     // diff --cached
-      .mockReturnValueOnce('public/20230301-c.md' as any);    // ls-files
+      .mockReturnValueOnce('public/20230101-a.md' as any) // diff main
+      .mockReturnValueOnce('public/20230201-b.md' as any) // diff --cached
+      .mockReturnValueOnce('public/20230301-c.md' as any); // ls-files
     const result = git.getBranchFiles();
     expect(result.files).toHaveLength(3);
   });
 
   it('falls back to master when diff against main fails', () => {
     mockedExecSync
-      .mockImplementationOnce(() => { const e: any = new Error(); e.stderr = 'unknown revision main'; throw e; }) // diff main
+      .mockImplementationOnce(() => {
+        const e: any = new Error();
+        e.stderr = 'unknown revision main';
+        throw e;
+      }) // diff main
       .mockReturnValueOnce('public/20230101-master.md' as any) // diff master
-      .mockReturnValueOnce('' as any)                           // diff --cached
-      .mockReturnValueOnce('' as any);                          // ls-files
+      .mockReturnValueOnce('' as any) // diff --cached
+      .mockReturnValueOnce('' as any); // ls-files
     const result = git.getBranchFiles();
     expect(result.files).toContain('20230101-master');
   });
@@ -249,8 +264,8 @@ describe('mergeAndPush()', () => {
 
   it('returns error when there are uncommitted changes', () => {
     mockedExecSync
-      .mockReturnValueOnce('feature-branch' as any)  // branch
-      .mockReturnValueOnce('M file.ts' as any);      // status --porcelain (has changes)
+      .mockReturnValueOnce('feature-branch' as any) // branch
+      .mockReturnValueOnce('M file.ts' as any); // status --porcelain (has changes)
     const result = git.mergeAndPush();
     expect(result.success).toBe(false);
     expect(result.error).toContain('未コミット');
@@ -258,9 +273,10 @@ describe('mergeAndPush()', () => {
 
   it('returns error when checkout main fails', () => {
     mockedExecSync
-      .mockReturnValueOnce('feature-branch' as any)  // branch
-      .mockReturnValueOnce('' as any)                 // status --porcelain (clean)
-      .mockImplementationOnce(() => {                 // checkout main
+      .mockReturnValueOnce('feature-branch' as any) // branch
+      .mockReturnValueOnce('' as any) // status --porcelain (clean)
+      .mockImplementationOnce(() => {
+        // checkout main
         const err: any = new Error();
         err.stderr = 'error: pathspec main did not match';
         throw err;
@@ -272,17 +288,18 @@ describe('mergeAndPush()', () => {
 
   it('returns error when merge fails', () => {
     mockedExecSync
-      .mockReturnValueOnce('feature-branch' as any)  // branch
-      .mockReturnValueOnce('' as any)                 // status --porcelain
-      .mockReturnValueOnce('' as any)                 // checkout main
-      .mockReturnValueOnce('' as any)                 // pull (ignored)
-      .mockImplementationOnce(() => {                 // merge
+      .mockReturnValueOnce('feature-branch' as any) // branch
+      .mockReturnValueOnce('' as any) // status --porcelain
+      .mockReturnValueOnce('' as any) // checkout main
+      .mockReturnValueOnce('' as any) // pull (ignored)
+      .mockImplementationOnce(() => {
+        // merge
         const err: any = new Error();
         err.stderr = 'CONFLICT';
         throw err;
       })
-      .mockReturnValueOnce('' as any)                 // merge --abort
-      .mockReturnValueOnce('' as any);                // checkout feature-branch
+      .mockReturnValueOnce('' as any) // merge --abort
+      .mockReturnValueOnce('' as any); // checkout feature-branch
     const result = git.mergeAndPush();
     expect(result.success).toBe(false);
     expect(result.error).toContain('マージ');
@@ -290,12 +307,12 @@ describe('mergeAndPush()', () => {
 
   it('success path: merges and pushes', () => {
     mockedExecSync
-      .mockReturnValueOnce('feature-branch' as any)  // branch
-      .mockReturnValueOnce('' as any)                 // status --porcelain
-      .mockReturnValueOnce('' as any)                 // checkout main
-      .mockReturnValueOnce('' as any)                 // pull
-      .mockReturnValueOnce('' as any)                 // merge
-      .mockReturnValueOnce('' as any);                // push
+      .mockReturnValueOnce('feature-branch' as any) // branch
+      .mockReturnValueOnce('' as any) // status --porcelain
+      .mockReturnValueOnce('' as any) // checkout main
+      .mockReturnValueOnce('' as any) // pull
+      .mockReturnValueOnce('' as any) // merge
+      .mockReturnValueOnce('' as any); // push
     const result = git.mergeAndPush();
     expect(result.success).toBe(true);
     expect(result.mergedBranch).toBe('feature-branch');
@@ -304,12 +321,13 @@ describe('mergeAndPush()', () => {
 
   it('returns error when push fails after merge', () => {
     mockedExecSync
-      .mockReturnValueOnce('feature-branch' as any)  // branch
-      .mockReturnValueOnce('' as any)                 // status --porcelain
-      .mockReturnValueOnce('' as any)                 // checkout main
-      .mockReturnValueOnce('' as any)                 // pull
-      .mockReturnValueOnce('' as any)                 // merge
-      .mockImplementationOnce(() => {                 // push
+      .mockReturnValueOnce('feature-branch' as any) // branch
+      .mockReturnValueOnce('' as any) // status --porcelain
+      .mockReturnValueOnce('' as any) // checkout main
+      .mockReturnValueOnce('' as any) // pull
+      .mockReturnValueOnce('' as any) // merge
+      .mockImplementationOnce(() => {
+        // push
         const err: any = new Error();
         err.stderr = 'push rejected';
         throw err;

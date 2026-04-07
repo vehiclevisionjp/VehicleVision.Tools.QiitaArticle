@@ -35,7 +35,9 @@ export class HolidayService {
       };
 
       this.cache.set(year, result);
-      console.log(`📅 ${year}年の祝日を外部APIから取得しました (${holidays.length}件)`);
+      console.log(
+        `📅 ${year}年の祝日を外部APIから取得しました (${holidays.length}件)`,
+      );
       return result;
     } catch (err: any) {
       const result: HolidayResult = {
@@ -50,23 +52,36 @@ export class HolidayService {
 
   private fetch(url: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      https.get(url, (res) => {
-        // リダイレクト対応
-        if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-          this.fetch(res.headers.location).then(resolve, reject);
-          return;
-        }
-
-        let data = '';
-        res.on('data', (chunk: string) => { data += chunk; });
-        res.on('end', () => {
-          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
-            resolve(data);
-          } else {
-            reject(new Error(`HTTP ${res.statusCode}`));
+      https
+        .get(url, (res) => {
+          // リダイレクト対応
+          if (
+            res.statusCode &&
+            res.statusCode >= 300 &&
+            res.statusCode < 400 &&
+            res.headers.location
+          ) {
+            this.fetch(res.headers.location).then(resolve, reject);
+            return;
           }
-        });
-      }).on('error', reject);
+
+          let data = '';
+          res.on('data', (chunk: string) => {
+            data += chunk;
+          });
+          res.on('end', () => {
+            if (
+              res.statusCode &&
+              res.statusCode >= 200 &&
+              res.statusCode < 300
+            ) {
+              resolve(data);
+            } else {
+              reject(new Error(`HTTP ${res.statusCode}`));
+            }
+          });
+        })
+        .on('error', reject);
     });
   }
 }

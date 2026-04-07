@@ -8,7 +8,10 @@ vi.mock('https');
 const mockedGet = vi.mocked(https.get);
 
 /** Creates a fake IncomingMessage-like response object */
-function fakeResponse(statusCode: number, body: string): EventEmitter & { statusCode: number; headers: Record<string, string> } {
+function fakeResponse(
+  statusCode: number,
+  body: string,
+): EventEmitter & { statusCode: number; headers: Record<string, string> } {
   const emitter = new EventEmitter() as any;
   emitter.statusCode = statusCode;
   emitter.headers = {};
@@ -52,7 +55,10 @@ describe('HolidayService', () => {
     expect(result.error).toBeNull();
     expect(result.holidays).toHaveLength(2);
     expect(result.holidays[0]).toEqual({ date: '2023-01-01', name: '元日' });
-    expect(result.holidays[1]).toEqual({ date: '2023-01-02', name: '振替休日' });
+    expect(result.holidays[1]).toEqual({
+      date: '2023-01-02',
+      name: '振替休日',
+    });
   });
 
   it('sorts holidays by date', async () => {
@@ -70,7 +76,7 @@ describe('HolidayService', () => {
     const service = new HolidayService();
     const result = await service.getHolidays(2023);
 
-    expect(result.holidays.map(h => h.date)).toEqual([
+    expect(result.holidays.map((h) => h.date)).toEqual([
       '2023-01-01',
       '2023-02-11',
       '2023-05-03',
@@ -93,7 +99,8 @@ describe('HolidayService', () => {
   });
 
   it('different years each make their own HTTP request', async () => {
-    const makeData = (year: number) => JSON.stringify({ [`${year}-01-01`]: '元日' });
+    const makeData = (year: number) =>
+      JSON.stringify({ [`${year}-01-01`]: '元日' });
 
     mockedGet.mockImplementation((_url: any, callback: any) => {
       const url = String(_url);

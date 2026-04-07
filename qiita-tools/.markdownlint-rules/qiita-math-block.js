@@ -1,6 +1,6 @@
 // @ts-check
 
-"use strict";
+'use strict';
 
 /**
  * Qiita 数式ブロックの構文を検証するカスタムルール
@@ -13,13 +13,13 @@
  *        resources/qiita-markdown - lib/qiita/markdown/filters/qiita_marker.rb
  */
 
-const { isPublicArticle } = require("./_helpers");
+const { isPublicArticle } = require('./_helpers');
 
 /** @type {import("markdownlint").Rule} */
 module.exports = {
-  names: ["qiita-math-block", "QFM004"],
-  description: "数式ブロック（$$ / ```math）の構文が正しいこと",
-  tags: ["qiita", "math"],
+  names: ['qiita-math-block', 'QFM004'],
+  description: '数式ブロック（$$ / ```math）の構文が正しいこと',
+  tags: ['qiita', 'math'],
   function: function rule(params, onError) {
     if (!isPublicArticle(params.name)) return;
 
@@ -27,9 +27,9 @@ module.exports = {
     let inMathDollar = false;
     let mathDollarStart = 0;
     let inCodeFence = false;
-    let codeFenceLang = "";
+    let codeFenceLang = '';
     let codeFenceStart = 0;
-    let codeFenceContent = "";
+    let codeFenceContent = '';
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -42,24 +42,24 @@ module.exports = {
           inCodeFence = true;
           codeFenceLang = fenceMatch[2].trim();
           codeFenceStart = lineNumber;
-          codeFenceContent = "";
+          codeFenceContent = '';
         } else {
           // コードフェンスの閉じ
-          if (codeFenceLang === "math" && codeFenceContent.trim() === "") {
+          if (codeFenceLang === 'math' && codeFenceContent.trim() === '') {
             onError({
               lineNumber: codeFenceStart,
-              detail: "```math ブロックの中身が空です",
+              detail: '```math ブロックの中身が空です',
             });
           }
           inCodeFence = false;
-          codeFenceLang = "";
+          codeFenceLang = '';
         }
         continue;
       }
 
       // コードフェンス内の内容を蓄積
       if (inCodeFence) {
-        codeFenceContent += line + "\n";
+        codeFenceContent += line + '\n';
         continue;
       }
 
@@ -78,7 +78,7 @@ module.exports = {
     if (inMathDollar) {
       onError({
         lineNumber: mathDollarStart,
-        detail: "$$ ブロックが閉じられていません。$$ で閉じてください",
+        detail: '$$ ブロックが閉じられていません。$$ で閉じてください',
       });
     }
   },

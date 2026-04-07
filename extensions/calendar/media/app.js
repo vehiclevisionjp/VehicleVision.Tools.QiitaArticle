@@ -7,21 +7,26 @@ function apiRequest(command, params) {
   return new Promise((resolve, reject) => {
     const id = String(++_requestId);
     _pendingRequests[id] = { resolve, reject };
-    vscode.postMessage(Object.assign({ type: 'request', id, command }, params || {}));
+    vscode.postMessage(
+      Object.assign({ type: 'request', id, command }, params || {}),
+    );
   });
 }
 
-window.addEventListener('message', event => {
+window.addEventListener('message', (event) => {
   const msg = event.data;
   if (msg.type === 'response' && _pendingRequests[msg.id]) {
     const { resolve, reject } = _pendingRequests[msg.id];
     delete _pendingRequests[msg.id];
-    if (msg.error) { reject(new Error(msg.error)); }
-    else { resolve(msg.data); }
+    if (msg.error) {
+      reject(new Error(msg.error));
+    } else {
+      resolve(msg.data);
+    }
   }
   // ファイル変更検知による自動リロード
   if (msg.type === 'fileChanged') {
-    (async function() {
+    (async function () {
       await Promise.all([fetchArticles(), fetchCurrentBranch()]);
       render();
     })();
@@ -30,7 +35,10 @@ window.addEventListener('message', event => {
 
 // === 外部リンク・エディタ連携 ===
 function openExternalUrl(url, event) {
-  if (event) { event.preventDefault(); event.stopPropagation(); }
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
   apiRequest('openExternal', { url: url });
 }
 
@@ -65,7 +73,11 @@ async function init() {
   currentYear = today.getFullYear();
   currentMonth = today.getMonth() + 1;
   initCalStart();
-  await Promise.all([fetchArticles(), fetchHolidaysForCalendar(), fetchCurrentBranch()]);
+  await Promise.all([
+    fetchArticles(),
+    fetchHolidaysForCalendar(),
+    fetchCurrentBranch(),
+  ]);
   render();
   document.body.classList.add('ready');
 }
@@ -73,12 +85,22 @@ async function init() {
 // === リロード ===
 async function reloadCalendar() {
   const btn = document.querySelector('.btn-reload');
-  if (btn) { btn.classList.add('spinning'); btn.disabled = true; }
+  if (btn) {
+    btn.classList.add('spinning');
+    btn.disabled = true;
+  }
   try {
-    await Promise.all([fetchArticles(), fetchHolidaysForCalendar(), fetchCurrentBranch()]);
+    await Promise.all([
+      fetchArticles(),
+      fetchHolidaysForCalendar(),
+      fetchCurrentBranch(),
+    ]);
     render();
   } finally {
-    if (btn) { btn.classList.remove('spinning'); btn.disabled = false; }
+    if (btn) {
+      btn.classList.remove('spinning');
+      btn.disabled = false;
+    }
   }
 }
 
@@ -107,7 +129,7 @@ async function fetchHolidaysForCalendar() {
   const years = new Set();
   years.add(calStartDate.getFullYear());
   years.add(endDate.getFullYear());
-  await Promise.all([...years].map(y => fetchHolidays(y)));
+  await Promise.all([...years].map((y) => fetchHolidays(y)));
 }
 
 // === ブランチ取得 ===
@@ -129,7 +151,7 @@ async function fetchCurrentBranch() {
   if (!isMainBranch && currentBranch) {
     try {
       const bf = await apiRequest('getBranchFiles');
-      branchFiles = (bf.success && bf.files) ? bf.files : [];
+      branchFiles = bf.success && bf.files ? bf.files : [];
     } catch {
       branchFiles = [];
     }
@@ -154,7 +176,8 @@ function renderBranchBanner() {
 
   // 凡例のブランチファイル表示制御
   if (legendBranchItem) {
-    legendBranchItem.style.display = (!isMainBranch && branchFiles.length > 0) ? '' : 'none';
+    legendBranchItem.style.display =
+      !isMainBranch && branchFiles.length > 0 ? '' : 'none';
   }
 
   if (!isMainBranch && currentBranch) {
@@ -164,21 +187,25 @@ function renderBranchBanner() {
     const mergeBtn = !hasUncommitted
       ? '<button class="btn-merge-push" onclick="mergeAndPush()"><i class="codicon codicon-git-merge"></i> マージ＆プッシュ</button>'
       : '';
-    banner.innerHTML = '現在のブランチは <strong>' + escapeHtml(currentBranch) + '</strong> です。記事の追加は main ブランチでのみ可能です。'
-      + '<div class="branch-actions">'
-      + commitBtn
-      + mergeBtn
-      + '</div>';
+    banner.innerHTML =
+      '現在のブランチは <strong>' +
+      escapeHtml(currentBranch) +
+      '</strong> です。記事の追加は main ブランチでのみ可能です。' +
+      '<div class="branch-actions">' +
+      commitBtn +
+      mergeBtn +
+      '</div>';
     banner.style.display = 'flex';
     if (newArticleBtn) {
       newArticleBtn.disabled = true;
       newArticleBtn.title = 'main ブランチ以外では記事を追加できません';
     }
   } else if (isMainBranch && hasUncommitted) {
-    banner.innerHTML = '未コミットの変更があります。'
-      + '<div class="branch-actions">'
-      + '<button class="btn-commit-push" onclick="openCommitModal(true)"><i class="codicon codicon-git-commit"></i> コミット＆プッシュ</button>'
-      + '</div>';
+    banner.innerHTML =
+      '未コミットの変更があります。' +
+      '<div class="branch-actions">' +
+      '<button class="btn-commit-push" onclick="openCommitModal(true)"><i class="codicon codicon-git-commit"></i> コミット＆プッシュ</button>' +
+      '</div>';
     banner.className = 'branch-banner main-uncommitted';
     banner.style.display = 'flex';
     if (newArticleBtn) {
@@ -220,9 +247,17 @@ async function openCommitModal(withPush) {
   try {
     const data = await apiRequest('getGitStatus');
     if (data.success && data.hasChanges) {
-      fileList.innerHTML = data.files.map(function(f) {
-        return '<div class="commit-file"><span class="commit-file-status">' + escapeHtml(f.status) + '</span>' + escapeHtml(f.path) + '</div>';
-      }).join('');
+      fileList.innerHTML = data.files
+        .map(function (f) {
+          return (
+            '<div class="commit-file"><span class="commit-file-status">' +
+            escapeHtml(f.status) +
+            '</span>' +
+            escapeHtml(f.path) +
+            '</div>'
+          );
+        })
+        .join('');
     } else if (data.success) {
       fileList.innerHTML = '<div class="commit-file">変更なし</div>';
       btn.disabled = true;
@@ -257,7 +292,10 @@ async function submitCommit() {
   btn.textContent = '処理中…';
 
   try {
-    const data = await apiRequest('gitCommit', { message: message, push: commitWithPush });
+    const data = await apiRequest('gitCommit', {
+      message: message,
+      push: commitWithPush,
+    });
     if (data.success) {
       closeCommitModal();
       await fetchCurrentBranch();
@@ -271,7 +309,9 @@ async function submitCommit() {
       btn.textContent = commitWithPush ? 'コミット＆プッシュ' : 'コミット';
     }
   } catch (e) {
-    error.textContent = commitWithPush ? 'コミット＆プッシュに失敗しました' : 'コミットに失敗しました';
+    error.textContent = commitWithPush
+      ? 'コミット＆プッシュに失敗しました'
+      : 'コミットに失敗しました';
     error.style.display = 'block';
     btn.disabled = false;
     btn.textContent = commitWithPush ? 'コミット＆プッシュ' : 'コミット';
@@ -294,11 +334,17 @@ async function mergeAndPush() {
       showNotification('✅ ' + data.message);
     } else {
       showNotification('❌ ' + data.error);
-      if (btn) { btn.disabled = false; btn.textContent = 'マージ＆プッシュ'; }
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'マージ＆プッシュ';
+      }
     }
   } catch (e) {
     showNotification('❌ マージ＆プッシュに失敗しました');
-    if (btn) { btn.disabled = false; btn.textContent = 'マージ＆プッシュ'; }
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'マージ＆プッシュ';
+    }
   }
 }
 
@@ -318,17 +364,31 @@ async function fetchHolidays(year) {
   try {
     const data = await apiRequest('getHolidays', { year: year });
     if (data.success) {
-      data.holidays.forEach(function(h) { holidays[h.date] = h.name; });
+      data.holidays.forEach(function (h) {
+        holidays[h.date] = h.name;
+      });
       holidays['_loaded_' + year] = true;
-      holidayErrors = holidayErrors.filter(function(e) { return e.indexOf(String(year)) === -1; });
+      holidayErrors = holidayErrors.filter(function (e) {
+        return e.indexOf(String(year)) === -1;
+      });
     } else {
-      if (!holidayErrors.some(function(e) { return e.indexOf(String(year)) >= 0; })) {
-        holidayErrors.push(data.error || year + '年の祝日を取得できませんでした');
+      if (
+        !holidayErrors.some(function (e) {
+          return e.indexOf(String(year)) >= 0;
+        })
+      ) {
+        holidayErrors.push(
+          data.error || year + '年の祝日を取得できませんでした',
+        );
       }
     }
   } catch (e) {
     console.error('祝日取得エラー:', e);
-    if (!holidayErrors.some(function(err) { return err.indexOf(String(year)) >= 0; })) {
+    if (
+      !holidayErrors.some(function (err) {
+        return err.indexOf(String(year)) >= 0;
+      })
+    ) {
       holidayErrors.push(year + '年の祝日を取得できませんでした');
     }
   }
@@ -384,46 +444,80 @@ function renderHeader() {
   const endY = endDate.getFullYear();
   const endM = endDate.getMonth() + 1;
   if (startY === endY) {
-    document.getElementById('monthLabel').textContent = startY + '年' + startM + '月〜' + endM + '月';
+    document.getElementById('monthLabel').textContent =
+      startY + '年' + startM + '月〜' + endM + '月';
   } else {
-    document.getElementById('monthLabel').textContent = startY + '年' + startM + '月〜' + endY + '年' + endM + '月';
+    document.getElementById('monthLabel').textContent =
+      startY + '年' + startM + '月〜' + endY + '年' + endM + '月';
   }
 }
 
 // サマリー
 function renderSummary() {
   const monthArticles = getMonthArticles(currentYear, currentMonth);
-  const pubArticles = monthArticles.filter(function(a) { return a.status === 'Published'; });
-  const pubPublic = pubArticles.filter(function(a) { return !a.isPrivate; }).length;
-  const pubPrivate = pubArticles.filter(function(a) { return a.isPrivate; }).length;
-  const scheduled = allArticles.filter(function(a) { return a.status === 'Scheduled'; }).length;
-  const scheduledPast = allArticles.filter(function(a) { return a.status === 'ScheduledPast'; }).length;
-  const ready = allArticles.filter(function(a) { return a.status === 'Ready'; }).length;
-  const draft = allArticles.filter(function(a) { return a.status === 'Draft'; }).length;
+  const pubArticles = monthArticles.filter(function (a) {
+    return a.status === 'Published';
+  });
+  const pubPublic = pubArticles.filter(function (a) {
+    return !a.isPrivate;
+  }).length;
+  const pubPrivate = pubArticles.filter(function (a) {
+    return a.isPrivate;
+  }).length;
+  const scheduled = allArticles.filter(function (a) {
+    return a.status === 'Scheduled';
+  }).length;
+  const scheduledPast = allArticles.filter(function (a) {
+    return a.status === 'ScheduledPast';
+  }).length;
+  const ready = allArticles.filter(function (a) {
+    return a.status === 'Ready';
+  }).length;
+  const draft = allArticles.filter(function (a) {
+    return a.status === 'Draft';
+  }).length;
 
   const monthLabel = currentYear + '年' + currentMonth + '月';
   document.getElementById('summary').innerHTML =
     '<div class="summary-group">' +
-    '<div class="summary-group-header">📅 ' + monthLabel + '</div>' +
+    '<div class="summary-group-header">📅 ' +
+    monthLabel +
+    '</div>' +
     '<div class="summary-group-cards">' +
-    '<div class="summary-card"><div class="number">' + monthArticles.length + '</div><div class="label">記事数</div></div>' +
-    '<div class="summary-card published"><div class="number">' + pubPublic + '</div><div class="label">公開</div></div>' +
-    '<div class="summary-card private"><div class="number">' + pubPrivate + '</div><div class="label">限定共有</div></div>' +
+    '<div class="summary-card"><div class="number">' +
+    monthArticles.length +
+    '</div><div class="label">記事数</div></div>' +
+    '<div class="summary-card published"><div class="number">' +
+    pubPublic +
+    '</div><div class="label">公開</div></div>' +
+    '<div class="summary-card private"><div class="number">' +
+    pubPrivate +
+    '</div><div class="label">限定共有</div></div>' +
     '</div></div>' +
     '<div class="summary-group">' +
     '<div class="summary-group-header">📁 全件</div>' +
     '<div class="summary-group-cards">' +
-    '<div class="summary-card"><div class="number">' + allArticles.length + '</div><div class="label">総記事数</div></div>' +
-    '<div class="summary-card scheduled"><div class="number">' + scheduled + '</div><div class="label">予約投稿</div></div>' +
-    '<div class="summary-card scheduledpast"><div class="number">' + scheduledPast + '</div><div class="label">予約超過</div></div>' +
-    '<div class="summary-card ready"><div class="number">' + ready + '</div><div class="label">投稿準備</div></div>' +
-    '<div class="summary-card draft"><div class="number">' + draft + '</div><div class="label">下書き</div></div>' +
+    '<div class="summary-card"><div class="number">' +
+    allArticles.length +
+    '</div><div class="label">総記事数</div></div>' +
+    '<div class="summary-card scheduled"><div class="number">' +
+    scheduled +
+    '</div><div class="label">予約投稿</div></div>' +
+    '<div class="summary-card scheduledpast"><div class="number">' +
+    scheduledPast +
+    '</div><div class="label">予約超過</div></div>' +
+    '<div class="summary-card ready"><div class="number">' +
+    ready +
+    '</div><div class="label">投稿準備</div></div>' +
+    '<div class="summary-card draft"><div class="number">' +
+    draft +
+    '</div><div class="label">下書き</div></div>' +
     '</div></div>';
 }
 
 // 当月の記事を取得
 function getMonthArticles(year, month) {
-  return allArticles.filter(function(a) {
+  return allArticles.filter(function (a) {
     var d = parseDisplayDate(a);
     return d.getFullYear() === year && d.getMonth() + 1 === month;
   });
@@ -435,10 +529,12 @@ function parseDisplayDate(article) {
 
 // ISO 週番号
 function getISOWeekNumber(date) {
-  var d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  var d = new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+  );
   d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
   var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
 }
 
 // === カレンダー描画（4ヶ月表示） ===
@@ -449,18 +545,20 @@ function renderCalendar() {
 
   // ヘッダー
   var dayNames = ['W', '月', '火', '水', '木', '金', '土', '日'];
-  var html = dayNames.map(function(d, i) {
-    var cls = 'day-header';
-    if (i === 0) cls += ' week-num-header';
-    if (i === 6) cls += ' day-header-sat';
-    if (i === 7) cls += ' day-header-sun';
-    return '<div class="' + cls + '">' + d + '</div>';
-  }).join('');
+  var html = dayNames
+    .map(function (d, i) {
+      var cls = 'day-header';
+      if (i === 0) cls += ' week-num-header';
+      if (i === 6) cls += ' day-header-sat';
+      if (i === 7) cls += ' day-header-sun';
+      return '<div class="' + cls + '">' + d + '</div>';
+    })
+    .join('');
 
   // 表示終了日
   var calEnd = getCalEndDate();
 
-  var rangeArticles = allArticles.filter(function(a) {
+  var rangeArticles = allArticles.filter(function (a) {
     var d = parseDisplayDate(a);
     return d >= calStartDate && d <= calEnd;
   });
@@ -483,8 +581,9 @@ function renderCalendar() {
 
     // 週番号セル
     var isoWeek = getISOWeekNumber(weekMonday);
-    var weekNumExtra = (isNewWeekMonth && w > 0) ? ' month-start-week' : '';
-    html += '<div class="week-num-cell' + weekNumExtra + '">W' + isoWeek + '</div>';
+    var weekNumExtra = isNewWeekMonth && w > 0 ? ' month-start-week' : '';
+    html +=
+      '<div class="week-num-cell' + weekNumExtra + '">W' + isoWeek + '</div>';
 
     // 7日分
     for (var d = 0; d < 7; d++) {
@@ -498,7 +597,9 @@ function renderCalendar() {
       var isSunday = d === 6;
 
       var cellDateStr = formatDate(cellDate);
-      var dayArticles = rangeArticles.filter(function(a) { return a.displayDate === cellDateStr; });
+      var dayArticles = rangeArticles.filter(function (a) {
+        return a.displayDate === cellDateStr;
+      });
       var holidayName = holidays[cellDateStr];
 
       var classes = 'day-cell';
@@ -511,7 +612,11 @@ function renderCalendar() {
       if (isNewWeekMonth && w > 0) classes += ' month-start-row';
 
       var holidayHtml = holidayName
-        ? '<div class="holiday-label" title="' + escapeAttr(holidayName) + '">' + escapeHtml(holidayName) + '</div>'
+        ? '<div class="holiday-label" title="' +
+          escapeAttr(holidayName) +
+          '">' +
+          escapeHtml(holidayName) +
+          '</div>'
         : '';
 
       var isPast = cellDate < today;
@@ -520,54 +625,95 @@ function renderCalendar() {
 
       // ドロップターゲット属性（今日以降ドロップ可能、onDrop 内でブランチチェック）
       var dropAttrs = isTodayOrFuture
-        ? 'ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event, \'' + cellDateStr + '\')"'
+        ? 'ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event, \'' +
+          cellDateStr +
+          '\')"'
         : '';
 
-      var articlesHtml = dayArticles.map(function(a) {
-        var statusClass;
-        if (a.status === 'Published' && a.isPrivate) statusClass = 'private';
-        else if (a.status === 'ScheduledPast') statusClass = 'scheduledpast';
-        else statusClass = a.status.toLowerCase();
+      var articlesHtml = dayArticles
+        .map(function (a) {
+          var statusClass;
+          if (a.status === 'Published' && a.isPrivate) statusClass = 'private';
+          else if (a.status === 'ScheduledPast') statusClass = 'scheduledpast';
+          else statusClass = a.status.toLowerCase();
 
-        var isBranchFile = !isMainBranch && branchFiles.indexOf(a.slug) !== -1;
-        var isDraggable = isMainBranch
-          ? a.status !== 'Published'
-          : (isBranchFile && a.status !== 'Published');
-        var dragAttrs = isDraggable
-          ? 'draggable="true" ondragstart="onDragStart(event, \'' + escapeAttr(a.slug) + '\')"'
-          : '';
+          var isBranchFile =
+            !isMainBranch && branchFiles.indexOf(a.slug) !== -1;
+          var isDraggable = isMainBranch
+            ? a.status !== 'Published'
+            : isBranchFile && a.status !== 'Published';
+          var dragAttrs = isDraggable
+            ? 'draggable="true" ondragstart="onDragStart(event, \'' +
+              escapeAttr(a.slug) +
+              '\')"'
+            : '';
 
-        var linkIcon = a.qiitaId
-          ? '<a href="#" onclick="openExternalUrl(\'https://qiita.com/items/' + escapeAttr(a.qiitaId) + '\', event)" class="article-link" title="Qiita で開く"><i class="codicon codicon-link-external"></i></a>'
-          : '';
+          var linkIcon = a.qiitaId
+            ? '<a href="#" onclick="openExternalUrl(\'https://qiita.com/items/' +
+              escapeAttr(a.qiitaId) +
+              '\', event)" class="article-link" title="Qiita で開く"><i class="codicon codicon-link-external"></i></a>'
+            : '';
 
-        var branchFileClass = isBranchFile ? ' branch-file' : '';
+          var branchFileClass = isBranchFile ? ' branch-file' : '';
 
-        return '<div class="article-item ' + statusClass + (isDraggable ? ' draggable' : '') + branchFileClass + '"'
-          + ' ' + dragAttrs
-          + ' onclick="showDetail(\'' + escapeAttr(a.slug) + '\')"'
-          + ' title="' + escapeAttr(a.title) + '">' + linkIcon + escapeHtml(a.title) + '</div>';
-      }).join('');
+          return (
+            '<div class="article-item ' +
+            statusClass +
+            (isDraggable ? ' draggable' : '') +
+            branchFileClass +
+            '"' +
+            ' ' +
+            dragAttrs +
+            ' onclick="showDetail(\'' +
+            escapeAttr(a.slug) +
+            '\')"' +
+            ' title="' +
+            escapeAttr(a.title) +
+            '">' +
+            linkIcon +
+            escapeHtml(a.title) +
+            '</div>'
+          );
+        })
+        .join('');
 
       // +ボタン（明日以降 & main のみ）
-      var addBtn = (isFuture && isMainBranch)
-        ? '<button class="add-article-btn" onclick="event.stopPropagation(); openCreateModal(\'' + cellDateStr + '\')" title="予約投稿を作成"><i class="codicon codicon-add"></i></button>'
-        : '';
+      var addBtn =
+        isFuture && isMainBranch
+          ? '<button class="add-article-btn" onclick="event.stopPropagation(); openCreateModal(\'' +
+            cellDateStr +
+            '\')" title="予約投稿を作成"><i class="codicon codicon-add"></i></button>'
+          : '';
 
       // 月ラベル
       var monthKey = cellYear + '-' + cellMonth;
-      var showMonthLabel = (dayNum === 1 || (d === 0 && isNewWeekMonth)) && !labeledMonths[monthKey];
+      var showMonthLabel =
+        (dayNum === 1 || (d === 0 && isNewWeekMonth)) &&
+        !labeledMonths[monthKey];
       if (showMonthLabel) labeledMonths[monthKey] = true;
       var monthLabel = showMonthLabel
-        ? '<div class="month-label-cell">' + (cellYear !== currentYear ? cellYear + '年' : '') + cellMonth + '月</div>'
+        ? '<div class="month-label-cell">' +
+          (cellYear !== currentYear ? cellYear + '年' : '') +
+          cellMonth +
+          '月</div>'
         : '';
 
-      html += '<div class="' + classes + '" data-date="' + cellDateStr + '" ' + dropAttrs + '>'
-        + '<div class="day-number">' + dayNum + addBtn + '</div>'
-        + monthLabel
-        + holidayHtml
-        + articlesHtml
-        + '</div>';
+      html +=
+        '<div class="' +
+        classes +
+        '" data-date="' +
+        cellDateStr +
+        '" ' +
+        dropAttrs +
+        '>' +
+        '<div class="day-number">' +
+        dayNum +
+        addBtn +
+        '</div>' +
+        monthLabel +
+        holidayHtml +
+        articlesHtml +
+        '</div>';
     }
   }
 
@@ -581,9 +727,13 @@ function onDragStart(e, slug) {
   e.dataTransfer.setData('text/plain', slug);
   e.target.classList.add('dragging');
 
-  document.querySelectorAll('.day-cell[ondrop]').forEach(function(el) { el.classList.add('drop-target'); });
+  document.querySelectorAll('.day-cell[ondrop]').forEach(function (el) {
+    el.classList.add('drop-target');
+  });
   // サイドバーもドロップターゲットとしてハイライト（日付あり記事の場合）
-  var article = allArticles.find(function(a) { return a.slug === slug; });
+  var article = allArticles.find(function (a) {
+    return a.slug === slug;
+  });
   if (article && article.hasDate) {
     var sidebar = document.getElementById('sidebarContent');
     if (sidebar) sidebar.classList.add('drop-target');
@@ -603,18 +753,26 @@ function onDragLeave(e) {
 async function onDrop(e, newDateStr) {
   e.preventDefault();
   e.currentTarget.classList.remove('drag-over');
-  document.querySelectorAll('.drop-target').forEach(function(el) { el.classList.remove('drop-target'); });
+  document.querySelectorAll('.drop-target').forEach(function (el) {
+    el.classList.remove('drop-target');
+  });
 
   var slug = e.dataTransfer.getData('text/plain') || dragSlug;
   if (!slug) return;
 
-  var article = allArticles.find(function(a) { return a.slug === slug; });
+  var article = allArticles.find(function (a) {
+    return a.slug === slug;
+  });
   if (!article) return;
 
   // main ブランチ以外では、そのブランチで追加されたファイルのみ移動可能
   if (!isMainBranch) {
     if (branchFiles.indexOf(article.slug) === -1) {
-      showNotification('⚠️ この記事は現在のブランチ（' + (currentBranch || '不明') + '）で追加されたものではないため移動できません');
+      showNotification(
+        '⚠️ この記事は現在のブランチ（' +
+          (currentBranch || '不明') +
+          '）で追加されたものではないため移動できません',
+      );
       dragSlug = null;
       return;
     }
@@ -626,31 +784,52 @@ async function onDrop(e, newDateStr) {
   }
 
   try {
-    var data = await apiRequest('rescheduleArticle', { slug: slug, newDate: newDateStr });
+    var data = await apiRequest('rescheduleArticle', {
+      slug: slug,
+      newDate: newDateStr,
+    });
     if (data.success) {
       await fetchArticles();
       render();
-      var msg = '📅 記事を ' + newDateStr + ' に移動しました（' + data.newSlug + '.md）';
-      if (data.readyForPublish) { msg += '\n✅ 投稿準備に変更しました（ignorePublish: false）'; }
+      var msg =
+        '📅 記事を ' +
+        newDateStr +
+        ' に移動しました（' +
+        data.newSlug +
+        '.md）';
+      if (data.readyForPublish) {
+        msg += '\n✅ 投稿準備に変更しました（ignorePublish: false）';
+      }
       showNotification(msg);
     } else {
       showNotification('⚠️ ' + (data.error || '移動に失敗しました'));
     }
   } catch (err) {
     console.error('日付変更エラー:', err);
-    showNotification('⚠️ エラー: ' + (err.message || '不明なエラーが発生しました'));
+    showNotification(
+      '⚠️ エラー: ' + (err.message || '不明なエラーが発生しました'),
+    );
   }
   dragSlug = null;
 }
 
 // ドラッグ終了時のクリーンアップ
-document.addEventListener('dragend', function() {
+document.addEventListener('dragend', function () {
   dragSlug = null;
-  document.querySelectorAll('.dragging').forEach(function(el) { el.classList.remove('dragging'); });
-  document.querySelectorAll('.drag-over').forEach(function(el) { el.classList.remove('drag-over'); });
-  document.querySelectorAll('.drop-target').forEach(function(el) { el.classList.remove('drop-target'); });
+  document.querySelectorAll('.dragging').forEach(function (el) {
+    el.classList.remove('dragging');
+  });
+  document.querySelectorAll('.drag-over').forEach(function (el) {
+    el.classList.remove('drag-over');
+  });
+  document.querySelectorAll('.drop-target').forEach(function (el) {
+    el.classList.remove('drop-target');
+  });
   var sidebar = document.getElementById('sidebarContent');
-  if (sidebar) { sidebar.classList.remove('drop-target'); sidebar.classList.remove('drag-over'); }
+  if (sidebar) {
+    sidebar.classList.remove('drop-target');
+    sidebar.classList.remove('drag-over');
+  }
 });
 
 // === サイドバー（日付未定記事）===
@@ -658,39 +837,61 @@ function renderSidebar() {
   var container = document.getElementById('sidebarContent');
   if (!container) return;
 
-  var undatedArticles = allArticles.filter(function(a) { return !a.hasDate; });
+  var undatedArticles = allArticles.filter(function (a) {
+    return !a.hasDate;
+  });
 
   if (undatedArticles.length === 0) {
-    container.innerHTML = '<div class="sidebar-empty">日付未定の記事はありません</div>';
+    container.innerHTML =
+      '<div class="sidebar-empty">日付未定の記事はありません</div>';
     return;
   }
 
-  var html = undatedArticles.map(function(a) {
-    var statusClass;
-    if (a.status === 'Published' && a.isPrivate) statusClass = 'private';
-    else if (a.status === 'ScheduledPast') statusClass = 'scheduledpast';
-    else statusClass = a.status.toLowerCase();
+  var html = undatedArticles
+    .map(function (a) {
+      var statusClass;
+      if (a.status === 'Published' && a.isPrivate) statusClass = 'private';
+      else if (a.status === 'ScheduledPast') statusClass = 'scheduledpast';
+      else statusClass = a.status.toLowerCase();
 
-    var isBranchFile = !isMainBranch && branchFiles.indexOf(a.slug) !== -1;
-    var isDraggable = isMainBranch
-      ? a.status !== 'Published'
-      : (isBranchFile && a.status !== 'Published');
-    var dragAttrs = isDraggable
-      ? 'draggable="true" ondragstart="onDragStart(event, \'' + escapeAttr(a.slug) + '\')"'
-      : '';
+      var isBranchFile = !isMainBranch && branchFiles.indexOf(a.slug) !== -1;
+      var isDraggable = isMainBranch
+        ? a.status !== 'Published'
+        : isBranchFile && a.status !== 'Published';
+      var dragAttrs = isDraggable
+        ? 'draggable="true" ondragstart="onDragStart(event, \'' +
+          escapeAttr(a.slug) +
+          '\')"'
+        : '';
 
-    var linkIcon = a.qiitaId
-      ? '<a href="#" onclick="openExternalUrl(\'https://qiita.com/items/' + escapeAttr(a.qiitaId) + '\', event)" class="article-link" title="Qiita で開く"><i class="codicon codicon-link-external"></i></a>'
-      : '';
+      var linkIcon = a.qiitaId
+        ? '<a href="#" onclick="openExternalUrl(\'https://qiita.com/items/' +
+          escapeAttr(a.qiitaId) +
+          '\', event)" class="article-link" title="Qiita で開く"><i class="codicon codicon-link-external"></i></a>'
+        : '';
 
-    var branchFileClass = isBranchFile ? ' branch-file' : '';
+      var branchFileClass = isBranchFile ? ' branch-file' : '';
 
-    return '<div class="article-item ' + statusClass + (isDraggable ? ' draggable' : '') + branchFileClass + '"'
-      + ' ' + dragAttrs
-      + ' onclick="showDetail(\'' + escapeAttr(a.slug) + '\')"'
-      + ' title="' + escapeAttr(a.title) + '">'
-      + linkIcon + escapeHtml(a.title) + '</div>';
-  }).join('');
+      return (
+        '<div class="article-item ' +
+        statusClass +
+        (isDraggable ? ' draggable' : '') +
+        branchFileClass +
+        '"' +
+        ' ' +
+        dragAttrs +
+        ' onclick="showDetail(\'' +
+        escapeAttr(a.slug) +
+        '\')"' +
+        ' title="' +
+        escapeAttr(a.title) +
+        '">' +
+        linkIcon +
+        escapeHtml(a.title) +
+        '</div>'
+      );
+    })
+    .join('');
 
   container.innerHTML = html;
 }
@@ -709,14 +910,20 @@ function onSidebarDragLeave(e) {
 async function onDropToSidebar(e) {
   e.preventDefault();
   e.currentTarget.classList.remove('drag-over');
-  document.querySelectorAll('.drop-target').forEach(function(el) { el.classList.remove('drop-target'); });
+  document.querySelectorAll('.drop-target').forEach(function (el) {
+    el.classList.remove('drop-target');
+  });
   var sidebar = document.getElementById('sidebarContent');
-  if (sidebar) { sidebar.classList.remove('drop-target'); }
+  if (sidebar) {
+    sidebar.classList.remove('drop-target');
+  }
 
   var slug = e.dataTransfer.getData('text/plain') || dragSlug;
   if (!slug) return;
 
-  var article = allArticles.find(function(a) { return a.slug === slug; });
+  var article = allArticles.find(function (a) {
+    return a.slug === slug;
+  });
   if (!article) return;
 
   // 日付なし記事をサイドバーにドロップしても何もしない
@@ -728,7 +935,11 @@ async function onDropToSidebar(e) {
   // main ブランチ以外では、そのブランチで追加されたファイルのみ移動可能
   if (!isMainBranch) {
     if (branchFiles.indexOf(article.slug) === -1) {
-      showNotification('⚠️ この記事は現在のブランチ（' + (currentBranch || '不明') + '）で追加されたものではないため移動できません');
+      showNotification(
+        '⚠️ この記事は現在のブランチ（' +
+          (currentBranch || '不明') +
+          '）で追加されたものではないため移動できません',
+      );
       dragSlug = null;
       return;
     }
@@ -739,13 +950,17 @@ async function onDropToSidebar(e) {
     if (data.success) {
       await fetchArticles();
       render();
-      showNotification('📁 記事を日付未定に移動しました（' + data.newSlug + '.md）');
+      showNotification(
+        '📁 記事を日付未定に移動しました（' + data.newSlug + '.md）',
+      );
     } else {
       showNotification('⚠️ ' + (data.error || '移動に失敗しました'));
     }
   } catch (err) {
     console.error('日付除去エラー:', err);
-    showNotification('⚠️ エラー: ' + (err.message || '不明なエラーが発生しました'));
+    showNotification(
+      '⚠️ エラー: ' + (err.message || '不明なエラーが発生しました'),
+    );
   }
   dragSlug = null;
 }
@@ -760,13 +975,17 @@ function renderYearlyChart() {
   for (var i = 0; i < 12; i++) {
     var m = baseMonth + i;
     var y = baseYear;
-    while (m > 12) { m -= 12; y++; }
+    while (m > 12) {
+      m -= 12;
+      y++;
+    }
     windowMonths.push({ year: y, month: m, label: m + '月' });
   }
 
   var startLabel = windowMonths[0].year + '年' + windowMonths[0].month + '月';
   var endLabel = windowMonths[11].year + '年' + windowMonths[11].month + '月';
-  document.getElementById('yearlyTitle').textContent = '投稿推移（' + startLabel + ' 〜 ' + endLabel + '）';
+  document.getElementById('yearlyTitle').textContent =
+    '投稿推移（' + startLabel + ' 〜 ' + endLabel + '）';
 
   // 凡例更新
   document.getElementById('yearlyLegend').innerHTML =
@@ -775,39 +994,64 @@ function renderYearlyChart() {
     '<div class="yearly-legend-item"><div class="yearly-legend-swatch line published-prev"></div>前年同月 (合計)</div>';
 
   // 公開済み + 予約のみ対象
-  var targetArticles = allArticles.filter(function(a) {
-    return a.status === 'Published' || a.status === 'Scheduled' || a.status === 'ScheduledPast';
+  var targetArticles = allArticles.filter(function (a) {
+    return (
+      a.status === 'Published' ||
+      a.status === 'Scheduled' ||
+      a.status === 'ScheduledPast'
+    );
   });
 
-  var countByMonth = function(y, m, status) {
-    return targetArticles.filter(function(a) {
+  var countByMonth = function (y, m, status) {
+    return targetArticles.filter(function (a) {
       var d = parseDisplayDate(a);
-      var match = status === 'Scheduled'
-        ? (a.status === 'Scheduled' || a.status === 'ScheduledPast')
-        : a.status === status;
+      var match =
+        status === 'Scheduled'
+          ? a.status === 'Scheduled' || a.status === 'ScheduledPast'
+          : a.status === status;
       return d.getFullYear() === y && d.getMonth() + 1 === m && match;
     }).length;
   };
 
-  var currPub = windowMonths.map(function(w) { return countByMonth(w.year, w.month, 'Published'); });
-  var currSch = windowMonths.map(function(w) { return countByMonth(w.year, w.month, 'Scheduled'); });
-  var prevPub = windowMonths.map(function(w) { return countByMonth(w.year - 1, w.month, 'Published'); });
-  var prevSch = windowMonths.map(function(w) { return countByMonth(w.year - 1, w.month, 'Scheduled'); });
+  var currPub = windowMonths.map(function (w) {
+    return countByMonth(w.year, w.month, 'Published');
+  });
+  var currSch = windowMonths.map(function (w) {
+    return countByMonth(w.year, w.month, 'Scheduled');
+  });
+  var prevPub = windowMonths.map(function (w) {
+    return countByMonth(w.year - 1, w.month, 'Published');
+  });
+  var prevSch = windowMonths.map(function (w) {
+    return countByMonth(w.year - 1, w.month, 'Scheduled');
+  });
 
-  var currTotal = currPub.map(function(v, i) { return v + currSch[i]; });
-  var prevTotal = prevPub.map(function(v, i) { return v + prevSch[i]; });
+  var currTotal = currPub.map(function (v, i) {
+    return v + currSch[i];
+  });
+  var prevTotal = prevPub.map(function (v, i) {
+    return v + prevSch[i];
+  });
 
   var maxCount = Math.max.apply(null, currTotal.concat(prevTotal).concat([1]));
 
   // SVG サイズ設定
-  var W = 800, H = 200;
-  var padL = 30, padR = 16, padT = 20, padB = 32;
+  var W = 800,
+    H = 200;
+  var padL = 30,
+    padR = 16,
+    padT = 20,
+    padB = 32;
   var chartW = W - padL - padR;
   var chartH = H - padT - padB;
 
   var xStep = chartW / 12; // 12等分（各月にセル幅を確保）
-  var getXCenter = function(i) { return padL + (i + 0.5) * xStep; };
-  var getY = function(v) { return padT + chartH - (v / maxCount) * chartH; };
+  var getXCenter = function (i) {
+    return padL + (i + 0.5) * xStep;
+  };
+  var getY = function (v) {
+    return padT + chartH - (v / maxCount) * chartH;
+  };
   var barW = xStep * 0.5;
   var baselineY = padT + chartH;
 
@@ -818,27 +1062,72 @@ function renderYearlyChart() {
   for (var g = 0; g <= gridCount; g++) {
     var val = Math.round(g * gridStep);
     var gy = getY(val);
-    gridLines += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (W - padR) + '" y2="' + gy + '" stroke="#c9cdd4" stroke-width="1"/>';
-    gridLines += '<text x="' + (padL - 6) + '" y="' + (gy + 4) + '" text-anchor="end" fill="#555b6e" font-size="11">' + val + '</text>';
+    gridLines +=
+      '<line x1="' +
+      padL +
+      '" y1="' +
+      gy +
+      '" x2="' +
+      (W - padR) +
+      '" y2="' +
+      gy +
+      '" stroke="#c9cdd4" stroke-width="1"/>';
+    gridLines +=
+      '<text x="' +
+      (padL - 6) +
+      '" y="' +
+      (gy + 4) +
+      '" text-anchor="end" fill="#555b6e" font-size="11">' +
+      val +
+      '</text>';
   }
 
   // X軸ラベル
   var xLabels = '';
   for (var xi = 0; xi < 12; xi++) {
     var wm = windowMonths[xi];
-    var isCurrent = (wm.year === baseYear && wm.month === baseMonth);
+    var isCurrent = wm.year === baseYear && wm.month === baseMonth;
     var weight = isCurrent ? 'font-weight:700' : '';
     var cx = getXCenter(xi);
-    var showYear = (xi === 0 || wm.month === 1);
+    var showYear = xi === 0 || wm.month === 1;
     if (showYear) {
-      xLabels += '<text x="' + cx + '" y="' + (H - 14) + '" text-anchor="middle" fill="#555b6e" font-size="9" style="' + weight + '">' + wm.year + '</text>';
-      xLabels += '<text x="' + cx + '" y="' + (H - 4) + '" text-anchor="middle" fill="#555b6e" font-size="11" style="' + weight + '">' + wm.label + '</text>';
+      xLabels +=
+        '<text x="' +
+        cx +
+        '" y="' +
+        (H - 14) +
+        '" text-anchor="middle" fill="#555b6e" font-size="9" style="' +
+        weight +
+        '">' +
+        wm.year +
+        '</text>';
+      xLabels +=
+        '<text x="' +
+        cx +
+        '" y="' +
+        (H - 4) +
+        '" text-anchor="middle" fill="#555b6e" font-size="11" style="' +
+        weight +
+        '">' +
+        wm.label +
+        '</text>';
     } else {
-      xLabels += '<text x="' + cx + '" y="' + (H - 6) + '" text-anchor="middle" fill="#555b6e" font-size="11" style="' + weight + '">' + wm.label + '</text>';
+      xLabels +=
+        '<text x="' +
+        cx +
+        '" y="' +
+        (H - 6) +
+        '" text-anchor="middle" fill="#555b6e" font-size="11" style="' +
+        weight +
+        '">' +
+        wm.label +
+        '</text>';
     }
   }
 
-  var pubColor = '#0f7b3f', schColor = '#0056d6', prevColor = '#e85d04';
+  var pubColor = '#0f7b3f',
+    schColor = '#0056d6',
+    prevColor = '#e85d04';
 
   // 積み上げ棒グラフ（今年）
   var bars = '';
@@ -849,17 +1138,46 @@ function renderYearlyChart() {
     // 公開済み（下段）
     if (currPub[bi] > 0) {
       var pubH = (currPub[bi] / maxCount) * chartH;
-      bars += '<rect x="' + x + '" y="' + (baselineY - pubH) + '" width="' + barW + '" height="' + pubH + '" fill="' + pubColor + '" opacity="0.45" rx="2"/>';
+      bars +=
+        '<rect x="' +
+        x +
+        '" y="' +
+        (baselineY - pubH) +
+        '" width="' +
+        barW +
+        '" height="' +
+        pubH +
+        '" fill="' +
+        pubColor +
+        '" opacity="0.45" rx="2"/>';
     }
     // 予約（上段）
     if (currSch[bi] > 0) {
       var pubH2 = (currPub[bi] / maxCount) * chartH;
       var schH = (currSch[bi] / maxCount) * chartH;
-      bars += '<rect x="' + x + '" y="' + (baselineY - pubH2 - schH) + '" width="' + barW + '" height="' + schH + '" fill="' + schColor + '" opacity="0.45" rx="2"/>';
+      bars +=
+        '<rect x="' +
+        x +
+        '" y="' +
+        (baselineY - pubH2 - schH) +
+        '" width="' +
+        barW +
+        '" height="' +
+        schH +
+        '" fill="' +
+        schColor +
+        '" opacity="0.45" rx="2"/>';
     }
     // 合計ラベル
     if (currTotal[bi] > 0) {
-      stackLabels += '<text x="' + cx + '" y="' + (getY(currTotal[bi]) - 5) + '" text-anchor="middle" fill="#333" font-size="10" font-weight="700">' + currTotal[bi] + '</text>';
+      stackLabels +=
+        '<text x="' +
+        cx +
+        '" y="' +
+        (getY(currTotal[bi]) - 5) +
+        '" text-anchor="middle" fill="#333" font-size="10" font-weight="700">' +
+        currTotal[bi] +
+        '</text>';
     }
   }
 
@@ -871,9 +1189,25 @@ function renderYearlyChart() {
     var lx = getXCenter(li);
     var ly = getY(prevTotal[li]);
     linePath += (li === 0 ? 'M' : 'L') + lx + ',' + ly;
-    dots += '<circle cx="' + lx + '" cy="' + ly + '" r="4.5" fill="' + prevColor + '" stroke="#fff" stroke-width="2"/>';
+    dots +=
+      '<circle cx="' +
+      lx +
+      '" cy="' +
+      ly +
+      '" r="4.5" fill="' +
+      prevColor +
+      '" stroke="#fff" stroke-width="2"/>';
     if (prevTotal[li] > 0) {
-      prevLabels += '<text x="' + lx + '" y="' + (ly - 9) + '" text-anchor="middle" fill="' + prevColor + '" font-size="9" font-weight="600">' + prevTotal[li] + '</text>';
+      prevLabels +=
+        '<text x="' +
+        lx +
+        '" y="' +
+        (ly - 9) +
+        '" text-anchor="middle" fill="' +
+        prevColor +
+        '" font-size="9" font-weight="600">' +
+        prevTotal[li] +
+        '</text>';
     }
   }
 
@@ -883,68 +1217,136 @@ function renderYearlyChart() {
     var diff = currTotal[di] - prevTotal[di];
     if (currTotal[di] > 0 || prevTotal[di] > 0) {
       var color, label;
-      if (diff > 0) { color = '#0f7b3f'; label = '+' + diff; }
-      else if (diff < 0) { color = '#c9190b'; label = '' + diff; }
-      else { color = '#555b6e'; label = '±0'; }
-      diffLabels += '<text x="' + getXCenter(di) + '" y="' + (H - 18) + '" text-anchor="middle" fill="' + color + '" font-size="9">' + label + '</text>';
+      if (diff > 0) {
+        color = '#0f7b3f';
+        label = '+' + diff;
+      } else if (diff < 0) {
+        color = '#c9190b';
+        label = '' + diff;
+      } else {
+        color = '#555b6e';
+        label = '±0';
+      }
+      diffLabels +=
+        '<text x="' +
+        getXCenter(di) +
+        '" y="' +
+        (H - 18) +
+        '" text-anchor="middle" fill="' +
+        color +
+        '" font-size="9">' +
+        label +
+        '</text>';
     }
   }
 
   // 今月強調線
-  var currentLine = '<line x1="' + getXCenter(0) + '" y1="' + padT + '" x2="' + getXCenter(0) + '" y2="' + baselineY + '" stroke="#f5a623" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.6"/>';
+  var currentLine =
+    '<line x1="' +
+    getXCenter(0) +
+    '" y1="' +
+    padT +
+    '" x2="' +
+    getXCenter(0) +
+    '" y2="' +
+    baselineY +
+    '" stroke="#f5a623" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.6"/>';
 
   var container = document.getElementById('yearlyChart');
-  container.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet">'
-    + gridLines
-    + xLabels
-    + diffLabels
-    + bars
-    + '<path d="' + linePath + '" fill="none" stroke="' + prevColor + '" stroke-width="2.5" stroke-linejoin="round" stroke-dasharray="6 3"/>'
-    + dots
-    + prevLabels
-    + stackLabels
-    + currentLine
-    + '</svg>';
+  container.innerHTML =
+    '<svg viewBox="0 0 ' +
+    W +
+    ' ' +
+    H +
+    '" preserveAspectRatio="xMidYMid meet">' +
+    gridLines +
+    xLabels +
+    diffLabels +
+    bars +
+    '<path d="' +
+    linePath +
+    '" fill="none" stroke="' +
+    prevColor +
+    '" stroke-width="2.5" stroke-linejoin="round" stroke-dasharray="6 3"/>' +
+    dots +
+    prevLabels +
+    stackLabels +
+    currentLine +
+    '</svg>';
 }
 
 // === 記事詳細モーダル ===
 function showDetail(slug) {
-  var article = allArticles.find(function(a) { return a.slug === slug; });
+  var article = allArticles.find(function (a) {
+    return a.slug === slug;
+  });
   if (!article) return;
 
-  var statusLabel = { Published: '投稿済み', Scheduled: '予約投稿', ScheduledPast: '予約超過', Ready: '投稿準備完了', Draft: '下書き' };
-  var visibilityLabel = article.status === 'Published'
-    ? (article.isPrivate ? '（限定共有）' : '（公開）')
-    : '';
+  var statusLabel = {
+    Published: '投稿済み',
+    Scheduled: '予約投稿',
+    ScheduledPast: '予約超過',
+    Ready: '投稿準備完了',
+    Draft: '下書き',
+  };
+  var visibilityLabel =
+    article.status === 'Published'
+      ? article.isPrivate
+        ? '（限定共有）'
+        : '（公開）'
+      : '';
   var statusClass;
-  if (article.status === 'Published' && article.isPrivate) statusClass = 'private';
+  if (article.status === 'Published' && article.isPrivate)
+    statusClass = 'private';
   else if (article.status === 'ScheduledPast') statusClass = 'scheduledpast';
   else statusClass = article.status.toLowerCase();
 
   var tagsHtml = (article.tags || [])
-    .map(function(t) { return '<span class="tag">' + escapeHtml(t) + '</span>'; }).join('');
+    .map(function (t) {
+      return '<span class="tag">' + escapeHtml(t) + '</span>';
+    })
+    .join('');
 
   var qiitaLink = '';
   if (article.qiitaId) {
-    qiitaLink = '<a href="#" onclick="event.preventDefault(); openExternalUrl(\'https://qiita.com/items/' + article.qiitaId + '\')" class="primary">Qiita で見る</a>';
+    qiitaLink =
+      '<a href="#" onclick="event.preventDefault(); openExternalUrl(\'https://qiita.com/items/' +
+      article.qiitaId +
+      '\')" class="primary">Qiita で見る</a>';
   }
 
-  var editLink = '<a href="#" onclick="event.preventDefault(); openInEditor(\'' + escapeAttr(article.slug) + '\')">エディタで開く</a>';
+  var editLink =
+    '<a href="#" onclick="event.preventDefault(); openInEditor(\'' +
+    escapeAttr(article.slug) +
+    '\')">エディタで開く</a>';
 
   // トグルボタン（投稿済み以外で表示）
   var toggleButtons = '';
   var dateChangeSection = '';
   if (article.status !== 'Published') {
     // private トグル
-    var privateIcon = article.isPrivate ? '<i class="codicon codicon-unlock"></i> 公開に切替' : '<i class="codicon codicon-lock"></i> 限定共有に切替';
-    toggleButtons += '<button class="btn-toggle" onclick="togglePrivate(\'' + escapeAttr(article.slug) + '\')">' + privateIcon + '</button>';
+    var privateIcon = article.isPrivate
+      ? '<i class="codicon codicon-unlock"></i> 公開に切替'
+      : '<i class="codicon codicon-lock"></i> 限定共有に切替';
+    toggleButtons +=
+      '<button class="btn-toggle" onclick="togglePrivate(\'' +
+      escapeAttr(article.slug) +
+      '\')">' +
+      privateIcon +
+      '</button>';
 
     // ignorePublish トグル（Draft / Ready のみ）
     if (article.status === 'Draft' || article.status === 'Ready') {
-      var readyIcon = article.status === 'Draft'
-        ? '<i class="codicon codicon-check"></i> 投稿準備にする'
-        : '<i class="codicon codicon-edit"></i> 下書きに戻す';
-      toggleButtons += '<button class="btn-toggle" onclick="toggleIgnorePublish(\'' + escapeAttr(article.slug) + '\')">' + readyIcon + '</button>';
+      var readyIcon =
+        article.status === 'Draft'
+          ? '<i class="codicon codicon-check"></i> 投稿準備にする'
+          : '<i class="codicon codicon-edit"></i> 下書きに戻す';
+      toggleButtons +=
+        '<button class="btn-toggle" onclick="toggleIgnorePublish(\'' +
+        escapeAttr(article.slug) +
+        '\')">' +
+        readyIcon +
+        '</button>';
     }
 
     // 日付変更セクション
@@ -956,9 +1358,17 @@ function showDetail(slug) {
         '<div class="date-change-section">' +
         '<label for="modalDateInput"><i class="codicon codicon-calendar"></i> 日付の変更</label>' +
         '<div class="date-change-row">' +
-        '<input type="date" id="modalDateInput" value="' + escapeAttr(dateInputVal) + '" min="' + escapeAttr(todayStr) + '" />' +
-        '<button class="btn-date-set" onclick="applyDateChange(\'' + escapeAttr(article.slug) + '\')"><i class="codicon codicon-arrow-right"></i> 日付を変更</button>' +
-        '<button class="btn-date-unset" onclick="removeDateInModal(\'' + escapeAttr(article.slug) + '\')"><i class="codicon codicon-remove"></i> 日付を未定にする</button>' +
+        '<input type="date" id="modalDateInput" value="' +
+        escapeAttr(dateInputVal) +
+        '" min="' +
+        escapeAttr(todayStr) +
+        '" />' +
+        '<button class="btn-date-set" onclick="applyDateChange(\'' +
+        escapeAttr(article.slug) +
+        '\')"><i class="codicon codicon-arrow-right"></i> 日付を変更</button>' +
+        '<button class="btn-date-unset" onclick="removeDateInModal(\'' +
+        escapeAttr(article.slug) +
+        '\')"><i class="codicon codicon-remove"></i> 日付を未定にする</button>' +
         '</div></div>';
     } else {
       // 日付なし（未定）→ 設定
@@ -966,21 +1376,46 @@ function showDetail(slug) {
         '<div class="date-change-section">' +
         '<label for="modalDateInput"><i class="codicon codicon-calendar"></i> 日付の設定</label>' +
         '<div class="date-change-row">' +
-        '<input type="date" id="modalDateInput" value="' + escapeAttr(dateInputVal) + '" min="' + escapeAttr(todayStr) + '" />' +
-        '<button class="btn-date-set" onclick="applyDateChange(\'' + escapeAttr(article.slug) + '\')"><i class="codicon codicon-arrow-right"></i> 日付を設定</button>' +
+        '<input type="date" id="modalDateInput" value="' +
+        escapeAttr(dateInputVal) +
+        '" min="' +
+        escapeAttr(todayStr) +
+        '" />' +
+        '<button class="btn-date-set" onclick="applyDateChange(\'' +
+        escapeAttr(article.slug) +
+        '\')"><i class="codicon codicon-arrow-right"></i> 日付を設定</button>' +
         '</div></div>';
     }
   }
-  var toggleSection = toggleButtons ? '<div class="toggle-actions">' + toggleButtons + '</div>' : '';
+  var toggleSection = toggleButtons
+    ? '<div class="toggle-actions">' + toggleButtons + '</div>'
+    : '';
 
   document.getElementById('tooltipCard').innerHTML =
-    '<h3>' + escapeHtml(article.title) + '</h3>' +
+    '<h3>' +
+    escapeHtml(article.title) +
+    '</h3>' +
     '<div class="meta">' +
-    '<div><strong>ステータス:</strong> <span class="badge ' + statusClass + '">' + statusLabel[article.status] + visibilityLabel + '</span></div>' +
-    '<div><strong>ファイル日付:</strong> ' + (article.fileDate || '未定') + '</div>' +
-    (article.scheduledDate ? '<div><strong>予約投稿日:</strong> ' + article.scheduledDate + '</div>' : '') +
-    (article.updatedAt ? '<div><strong>最終更新:</strong> ' + new Date(article.updatedAt).toLocaleString('ja-JP') + '</div>' : '') +
-    '<div><strong>スラッグ:</strong> ' + escapeHtml(article.slug) + '</div>' +
+    '<div><strong>ステータス:</strong> <span class="badge ' +
+    statusClass +
+    '">' +
+    statusLabel[article.status] +
+    visibilityLabel +
+    '</span></div>' +
+    '<div><strong>ファイル日付:</strong> ' +
+    (article.fileDate || '未定') +
+    '</div>' +
+    (article.scheduledDate
+      ? '<div><strong>予約投稿日:</strong> ' + article.scheduledDate + '</div>'
+      : '') +
+    (article.updatedAt
+      ? '<div><strong>最終更新:</strong> ' +
+        new Date(article.updatedAt).toLocaleString('ja-JP') +
+        '</div>'
+      : '') +
+    '<div><strong>スラッグ:</strong> ' +
+    escapeHtml(article.slug) +
+    '</div>' +
     (tagsHtml ? '<div style="margin-top:8px">' + tagsHtml + '</div>' : '') +
     '</div>' +
     toggleSection +
@@ -1038,20 +1473,28 @@ async function applyDateChange(slug) {
     return;
   }
   try {
-    var data = await apiRequest('rescheduleArticle', { slug: slug, newDate: newDate });
+    var data = await apiRequest('rescheduleArticle', {
+      slug: slug,
+      newDate: newDate,
+    });
     if (data.success) {
       closeTooltip();
       await fetchArticles();
       render();
-      var msg = '📅 記事を ' + newDate + ' に移動しました（' + data.newSlug + '.md）';
-      if (data.readyForPublish) { msg += '\n✅ 投稿準備に変更しました（ignorePublish: false）'; }
+      var msg =
+        '📅 記事を ' + newDate + ' に移動しました（' + data.newSlug + '.md）';
+      if (data.readyForPublish) {
+        msg += '\n✅ 投稿準備に変更しました（ignorePublish: false）';
+      }
       showNotification(msg);
     } else {
       showNotification('⚠️ ' + (data.error || '移動に失敗しました'));
     }
   } catch (err) {
     console.error('日付変更エラー:', err);
-    showNotification('⚠️ エラー: ' + (err.message || '不明なエラーが発生しました'));
+    showNotification(
+      '⚠️ エラー: ' + (err.message || '不明なエラーが発生しました'),
+    );
   }
 }
 
@@ -1062,13 +1505,17 @@ async function removeDateInModal(slug) {
       closeTooltip();
       await fetchArticles();
       render();
-      showNotification('📁 記事を日付未定に移動しました（' + data.newSlug + '.md）');
+      showNotification(
+        '📁 記事を日付未定に移動しました（' + data.newSlug + '.md）',
+      );
     } else {
       showNotification('⚠️ ' + (data.error || '移動に失敗しました'));
     }
   } catch (err) {
     console.error('日付除去エラー:', err);
-    showNotification('⚠️ エラー: ' + (err.message || '不明なエラーが発生しました'));
+    showNotification(
+      '⚠️ エラー: ' + (err.message || '不明なエラーが発生しました'),
+    );
   }
 }
 
@@ -1114,7 +1561,7 @@ function sanitizeBranchName(name) {
 }
 
 // === キーボードナビゲーション ===
-document.addEventListener('keydown', function(e) {
+document.addEventListener('keydown', function (e) {
   if (document.getElementById('createOverlay').classList.contains('active')) {
     if (e.key === 'Escape') closeCreateModal();
     return;
@@ -1143,17 +1590,22 @@ async function openCreateModal(dateStr) {
   document.getElementById('createBranch').checked = true;
 
   if (dateStr) {
-    document.querySelector('input[name="createMode"][value="scheduled"]').checked = true;
+    document.querySelector(
+      'input[name="createMode"][value="scheduled"]',
+    ).checked = true;
     document.getElementById('createDate').value = dateStr;
   } else {
-    document.querySelector('input[name="createMode"][value="public"]').checked = true;
+    document.querySelector('input[name="createMode"][value="public"]').checked =
+      true;
     document.getElementById('createDate').value = '';
   }
   onModeChange();
   updateCreatePreview();
   document.getElementById('createOverlay').classList.add('active');
   await updateBranchInfo();
-  setTimeout(function() { document.getElementById('createTitle').focus(); }, 100);
+  setTimeout(function () {
+    document.getElementById('createTitle').focus();
+  }, 100);
 }
 
 function onModeChange() {
@@ -1165,7 +1617,10 @@ function onModeChange() {
     tomorrow.setDate(tomorrow.getDate() + 1);
     var minDate = formatDate(tomorrow);
     document.getElementById('createDate').min = minDate;
-    if (!document.getElementById('createDate').value || document.getElementById('createDate').value <= formatDate(new Date())) {
+    if (
+      !document.getElementById('createDate').value ||
+      document.getElementById('createDate').value <= formatDate(new Date())
+    ) {
       document.getElementById('createDate').value = minDate;
     }
   }
@@ -1196,7 +1651,11 @@ function updateCreatePreview() {
     var safeTitle = sanitizeFileName(title);
     var slug = dateForFile + '-' + safeTitle;
     var branchSlug = sanitizeBranchName(slug);
-    var modeLabel = { public: '公開', private: '限定共有', scheduled: '予約投稿' }[mode];
+    var modeLabel = {
+      public: '公開',
+      private: '限定共有',
+      scheduled: '予約投稿',
+    }[mode];
     var html = '<strong>種別:</strong> ' + modeLabel + '<br>';
     html += '<strong>ファイル名:</strong> ' + escapeHtml(getArticlePath(slug));
     if (createBranch) {
@@ -1204,7 +1663,8 @@ function updateCreatePreview() {
     }
     preview.innerHTML = html;
   } else {
-    preview.innerHTML = '<span class="form-hint">スラッグを入力するとファイル名がプレビューされます</span>';
+    preview.innerHTML =
+      '<span class="form-hint">スラッグを入力するとファイル名がプレビューされます</span>';
   }
 }
 
@@ -1214,12 +1674,22 @@ async function updateBranchInfo() {
     var data = await apiRequest('getGitBranch');
     if (data.success) {
       var isMain = data.branch === 'main' || data.branch === 'master';
-      var icon = isMain ? '<i class="codicon codicon-check"></i>' : '<i class="codicon codicon-warning"></i>';
-      var warn = isMain ? '' : '（main 以外のブランチです。main に切り替えてから作成します）';
-      infoEl.innerHTML = icon + ' 現在のブランチ: <strong>' + escapeHtml(data.branch) + '</strong> ' + warn;
+      var icon = isMain
+        ? '<i class="codicon codicon-check"></i>'
+        : '<i class="codicon codicon-warning"></i>';
+      var warn = isMain
+        ? ''
+        : '（main 以外のブランチです。main に切り替えてから作成します）';
+      infoEl.innerHTML =
+        icon +
+        ' 現在のブランチ: <strong>' +
+        escapeHtml(data.branch) +
+        '</strong> ' +
+        warn;
       infoEl.className = 'branch-info ' + (isMain ? '' : 'branch-warn');
     } else {
-      infoEl.innerHTML = '<i class="codicon codicon-warning"></i> ブランチ情報を取得できませんでした';
+      infoEl.innerHTML =
+        '<i class="codicon codicon-warning"></i> ブランチ情報を取得できませんでした';
       infoEl.className = 'branch-info branch-warn';
     }
   } catch {
@@ -1228,10 +1698,16 @@ async function updateBranchInfo() {
 }
 
 // 入力イベント
-document.getElementById('createTitle').addEventListener('input', updateCreatePreview);
-document.getElementById('createBranch').addEventListener('change', updateCreatePreview);
-document.getElementById('createDate').addEventListener('change', updateCreatePreview);
-document.querySelectorAll('input[name="createMode"]').forEach(function(r) {
+document
+  .getElementById('createTitle')
+  .addEventListener('input', updateCreatePreview);
+document
+  .getElementById('createBranch')
+  .addEventListener('change', updateCreatePreview);
+document
+  .getElementById('createDate')
+  .addEventListener('change', updateCreatePreview);
+document.querySelectorAll('input[name="createMode"]').forEach(function (r) {
   r.addEventListener('change', onModeChange);
 });
 
@@ -1248,7 +1724,8 @@ async function submitCreateArticle() {
     return;
   }
 
-  var date = mode === 'scheduled' ? document.getElementById('createDate').value : null;
+  var date =
+    mode === 'scheduled' ? document.getElementById('createDate').value : null;
   if (mode === 'scheduled' && !date) {
     errorEl.textContent = '予約投稿日を指定してください';
     errorEl.style.display = 'block';
@@ -1264,7 +1741,7 @@ async function submitCreateArticle() {
       title: title,
       mode: mode,
       date: date,
-      createBranch: document.getElementById('createBranch').checked
+      createBranch: document.getElementById('createBranch').checked,
     });
 
     if (result.success) {
@@ -1273,7 +1750,14 @@ async function submitCreateArticle() {
       await fetchArticles();
       render();
       var branchMsg = result.branch ? ' (ブランチ: ' + result.branch + ')' : '';
-      showNotification('✅ ' + result.modeLabel + '記事を作成しました: ' + result.slug + '.md' + branchMsg);
+      showNotification(
+        '✅ ' +
+          result.modeLabel +
+          '記事を作成しました: ' +
+          result.slug +
+          '.md' +
+          branchMsg,
+      );
     } else {
       errorEl.textContent = result.error || '作成に失敗しました';
       errorEl.style.display = 'block';
@@ -1300,10 +1784,14 @@ function showNotification(message) {
   }
   el.textContent = message;
   document.body.appendChild(el);
-  requestAnimationFrame(function() { el.classList.add('show'); });
-  setTimeout(function() {
+  requestAnimationFrame(function () {
+    el.classList.add('show');
+  });
+  setTimeout(function () {
     el.classList.remove('show');
-    setTimeout(function() { el.remove(); }, 300);
+    setTimeout(function () {
+      el.remove();
+    }, 300);
   }, 3000);
 }
 

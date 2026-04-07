@@ -9,15 +9,21 @@ let parser: ArticleParser;
 
 function write(name: string, content: string, subDir?: string): void {
   const dir = subDir ? path.join(tmpDir, subDir) : tmpDir;
-  if (!fs.existsSync(dir)) { fs.mkdirSync(dir, { recursive: true }); }
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
   fs.writeFileSync(path.join(dir, `${name}.md`), content, 'utf-8');
 }
 
 function frontMatter(fields: Record<string, string>, extra = ''): string {
   const lines = ['---'];
-  for (const [k, v] of Object.entries(fields)) { lines.push(`${k}: ${v}`); }
+  for (const [k, v] of Object.entries(fields)) {
+    lines.push(`${k}: ${v}`);
+  }
   lines.push('---');
-  if (extra) { lines.push('', extra); }
+  if (extra) {
+    lines.push('', extra);
+  }
   return lines.join('\n');
 }
 
@@ -58,7 +64,7 @@ describe('parseAll()', () => {
     write('20230101-a', frontMatter({ title: 'A' }));
     write('20230201-b', frontMatter({ title: 'B' }));
     const articles = parser.parseAll();
-    expect(articles.map(a => a.title)).toEqual(['A', 'B', 'C']);
+    expect(articles.map((a) => a.title)).toEqual(['A', 'B', 'C']);
   });
 
   it('skips dot directories', () => {
@@ -94,27 +100,39 @@ describe('status determination', () => {
   });
 
   it('Ready when ignorePublish is false', () => {
-    write('20230101-ready', frontMatter({ title: 'Ready', ignorePublish: 'false' }));
+    write(
+      '20230101-ready',
+      frontMatter({ title: 'Ready', ignorePublish: 'false' }),
+    );
     const [a] = parser.parseAll();
     expect(a.status).toBe('Ready');
   });
 
   it('Scheduled for future scheduled_publish', () => {
-    write('20230101-sched', frontMatter({ title: 'Sched', scheduled_publish: '2099-12-31' }));
+    write(
+      '20230101-sched',
+      frontMatter({ title: 'Sched', scheduled_publish: '2099-12-31' }),
+    );
     const [a] = parser.parseAll();
     expect(a.status).toBe('Scheduled');
     expect(a.scheduledDate).toBe('2099-12-31');
   });
 
   it('ScheduledPast for past scheduled_publish', () => {
-    write('20230101-past', frontMatter({ title: 'Past', scheduled_publish: '2020-01-01' }));
+    write(
+      '20230101-past',
+      frontMatter({ title: 'Past', scheduled_publish: '2020-01-01' }),
+    );
     const [a] = parser.parseAll();
     expect(a.status).toBe('ScheduledPast');
     expect(a.scheduledDate).toBe('2020-01-01');
   });
 
   it('Draft when scheduled_publish is invalid date string', () => {
-    write('20230101-inv', frontMatter({ title: 'Inv', scheduled_publish: 'not-a-date' }));
+    write(
+      '20230101-inv',
+      frontMatter({ title: 'Inv', scheduled_publish: 'not-a-date' }),
+    );
     const [a] = parser.parseAll();
     expect(a.status).toBe('Draft');
     expect(a.scheduledDate).toBeNull();
@@ -132,13 +150,17 @@ describe('status determination', () => {
 
 describe('front matter parsing', () => {
   it('parses inline comma-separated tags', () => {
-    write('20230101-tags', frontMatter({ title: 'Tags', tags: 'TypeScript, JavaScript, Node.js' }));
+    write(
+      '20230101-tags',
+      frontMatter({ title: 'Tags', tags: 'TypeScript, JavaScript, Node.js' }),
+    );
     const [a] = parser.parseAll();
     expect(a.tags).toEqual(['TypeScript', 'JavaScript', 'Node.js']);
   });
 
   it('parses block-style tags', () => {
-    const content = '---\ntitle: Tags\ntags:\n  - TypeScript\n  - JavaScript\n---';
+    const content =
+      '---\ntitle: Tags\ntags:\n  - TypeScript\n  - JavaScript\n---';
     write('20230101-block', content);
     const [a] = parser.parseAll();
     expect(a.tags).toEqual(['TypeScript', 'JavaScript']);
@@ -175,7 +197,8 @@ describe('front matter parsing', () => {
   });
 
   it('strips quotes from tag values in block style', () => {
-    const content = '---\ntitle: Tags\ntags:\n  - "TypeScript"\n  - \'JavaScript\'\n---';
+    const content =
+      '---\ntitle: Tags\ntags:\n  - "TypeScript"\n  - \'JavaScript\'\n---';
     write('20230101-qtagblock', content);
     const [a] = parser.parseAll();
     expect(a.tags).toEqual(['TypeScript', 'JavaScript']);
@@ -211,25 +234,37 @@ describe('date prefix', () => {
 
 describe('displayDate logic', () => {
   it('uses scheduledDate first', () => {
-    write('20230101-sched', frontMatter({ title: 'S', scheduled_publish: '2099-06-01' }));
+    write(
+      '20230101-sched',
+      frontMatter({ title: 'S', scheduled_publish: '2099-06-01' }),
+    );
     const [a] = parser.parseAll();
     expect(a.displayDate).toBe('2099-06-01');
   });
 
   it('uses fileDate when ignorePublish is false (Ready)', () => {
-    write('20230615-ready', frontMatter({ title: 'R', ignorePublish: 'false' }));
+    write(
+      '20230615-ready',
+      frontMatter({ title: 'R', ignorePublish: 'false' }),
+    );
     const [a] = parser.parseAll();
     expect(a.displayDate).toBe('2023-06-15');
   });
 
   it('uses created_at ISO 8601 timestamp when no other date', () => {
-    write(`${UNDATED_PREFIX}-c`, frontMatter({ title: 'C', created_at: '2023-03-10T12:00:00+09:00' }));
+    write(
+      `${UNDATED_PREFIX}-c`,
+      frontMatter({ title: 'C', created_at: '2023-03-10T12:00:00+09:00' }),
+    );
     const [a] = parser.parseAll();
     expect(a.displayDate).toBe('2023-03-10');
   });
 
   it('uses updated_at timestamp as fallback after created_at', () => {
-    write(`${UNDATED_PREFIX}-u`, frontMatter({ title: 'U', updated_at: '2023-07-20T00:00:00Z' }));
+    write(
+      `${UNDATED_PREFIX}-u`,
+      frontMatter({ title: 'U', updated_at: '2023-07-20T00:00:00Z' }),
+    );
     const [a] = parser.parseAll();
     expect(a.displayDate).toBe('2023-07-20');
   });
@@ -241,7 +276,10 @@ describe('displayDate logic', () => {
   });
 
   it('hasDate is true when displayDate is non-empty', () => {
-    write('20230101-has', frontMatter({ title: 'Has', ignorePublish: 'false' }));
+    write(
+      '20230101-has',
+      frontMatter({ title: 'Has', ignorePublish: 'false' }),
+    );
     const [a] = parser.parseAll();
     expect(a.hasDate).toBe(true);
   });
@@ -279,31 +317,46 @@ describe('qiitaId extraction', () => {
 
 describe('parseDateFromTimestamp', () => {
   it('parses ISO 8601 timestamp from created_at', () => {
-    write(`${UNDATED_PREFIX}-iso`, frontMatter({ title: 'ISO', created_at: '2023-05-20T15:30:00+09:00' }));
+    write(
+      `${UNDATED_PREFIX}-iso`,
+      frontMatter({ title: 'ISO', created_at: '2023-05-20T15:30:00+09:00' }),
+    );
     const [a] = parser.parseAll();
     expect(a.displayDate).toBe('2023-05-20');
   });
 
   it('parses plain YYYY-MM-DD from created_at', () => {
-    write(`${UNDATED_PREFIX}-plain`, frontMatter({ title: 'Plain', created_at: '2023-08-15' }));
+    write(
+      `${UNDATED_PREFIX}-plain`,
+      frontMatter({ title: 'Plain', created_at: '2023-08-15' }),
+    );
     const [a] = parser.parseAll();
     expect(a.displayDate).toBe('2023-08-15');
   });
 
   it('returns empty displayDate for null created_at', () => {
-    write(`${UNDATED_PREFIX}-null`, frontMatter({ title: 'Null', created_at: 'null' }));
+    write(
+      `${UNDATED_PREFIX}-null`,
+      frontMatter({ title: 'Null', created_at: 'null' }),
+    );
     const [a] = parser.parseAll();
     expect(a.displayDate).toBe('');
   });
 
   it('returns empty displayDate for empty-string created_at', () => {
-    write(`${UNDATED_PREFIX}-empty`, frontMatter({ title: 'Empty', created_at: "''" }));
+    write(
+      `${UNDATED_PREFIX}-empty`,
+      frontMatter({ title: 'Empty', created_at: "''" }),
+    );
     const [a] = parser.parseAll();
     expect(a.displayDate).toBe('');
   });
 
   it('returns empty displayDate for invalid date string', () => {
-    write(`${UNDATED_PREFIX}-inv`, frontMatter({ title: 'Inv', created_at: 'not-a-date' }));
+    write(
+      `${UNDATED_PREFIX}-inv`,
+      frontMatter({ title: 'Inv', created_at: 'not-a-date' }),
+    );
     const [a] = parser.parseAll();
     expect(a.displayDate).toBe('');
   });
@@ -313,7 +366,8 @@ describe('parseDateFromTimestamp', () => {
 
 describe('CRLF support in front matter', () => {
   it('parses front matter with CRLF line endings', () => {
-    const content = '---\r\ntitle: CRLF Title\r\ntags: TypeScript, CRLF\r\n---\r\n';
+    const content =
+      '---\r\ntitle: CRLF Title\r\ntags: TypeScript, CRLF\r\n---\r\n';
     write('20230101-crlf', content);
     const [a] = parser.parseAll();
     expect(a.title).toBe('CRLF Title');
@@ -325,7 +379,10 @@ describe('CRLF support in front matter', () => {
 
 describe('updatedAt parsing', () => {
   it('captures updated_at value', () => {
-    write('20230101-upd', frontMatter({ title: 'Upd', updated_at: '2023-09-01T00:00:00+09:00' }));
+    write(
+      '20230101-upd',
+      frontMatter({ title: 'Upd', updated_at: '2023-09-01T00:00:00+09:00' }),
+    );
     const [a] = parser.parseAll();
     expect(a.updatedAt).toBe('2023-09-01T00:00:00+09:00');
   });

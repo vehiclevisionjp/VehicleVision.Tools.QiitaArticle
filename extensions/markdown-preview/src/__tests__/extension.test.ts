@@ -112,7 +112,9 @@ describe('footnotePlugin', () => {
   });
 
   it('renders multiple footnotes in order', () => {
-    const result = md.render('First[^a] second[^b]\n\n[^a]: First note\n\n[^b]: Second note');
+    const result = md.render(
+      'First[^a] second[^b]\n\n[^a]: First note\n\n[^b]: Second note',
+    );
     expect(result).toContain('fn-a');
     expect(result).toContain('fn-b');
     expect(result).toContain('First note');
@@ -169,7 +171,9 @@ describe('embedPlugin', () => {
   });
 
   it('URL with surrounding text is not converted to embed', () => {
-    const result = md.render('Check out https://www.youtube.com/watch?v=dQw4w9WgXcQ here');
+    const result = md.render(
+      'Check out https://www.youtube.com/watch?v=dQw4w9WgXcQ here',
+    );
     expect(result).not.toContain('qiita-embed');
   });
 
