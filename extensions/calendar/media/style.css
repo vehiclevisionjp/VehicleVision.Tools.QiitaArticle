@@ -302,7 +302,7 @@ button .codicon {
 /* カレンダー + サイドバー レイアウト */
 .calendar-layout {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 0;
 }
 
@@ -318,10 +318,6 @@ button .codicon {
 /* サイドバー（日付未定記事） */
 .sidebar-panel {
   flex: 0 0 calc((100% - 40px) / 8);
-  position: sticky;
-  top: 0;
-  align-self: flex-start;
-  max-height: 300vh;
   border: 1px solid var(--border);
   border-left: 2px solid var(--border);
   border-radius: 0 8px 8px 0;
@@ -670,9 +666,73 @@ button .codicon {
   gap: 4px;
 }
 
-.btn-toggle:hover {
+.btn-toggle:hover,
+.btn-date-unset:hover {
   background: var(--hover);
   border-color: var(--text-muted);
+}
+
+/* 日付変更セクション（モーダル内） */
+.date-change-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.date-change-section label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.date-change-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.date-change-row input[type="date"] {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  background: var(--card);
+  color: var(--text);
+  flex: 1;
+  min-width: 130px;
+}
+
+.btn-date-set {
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  border: 1px solid var(--scheduled);
+  background: var(--scheduled-bg);
+  color: var(--text);
+  transition: opacity 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-date-set:hover { opacity: 0.8; }
+
+.btn-date-unset {
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text-muted);
+  transition: background 0.15s, border-color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /* 年間チャート */
