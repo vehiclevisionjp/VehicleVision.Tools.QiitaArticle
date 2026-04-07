@@ -35,9 +35,19 @@ jobs:
           npm install
           npm run build
 
+      # ── Calendar 拡張のテスト ──────────────────────────────
+      - name: Test Calendar extension
+        working-directory: extensions/calendar
+        run: npm test
+
       # ── MarkdownPreview 拡張のビルドテスト ───────────────
       - name: Build MarkdownPreview extension
         working-directory: extensions/markdown-preview
         run: |
           npm install
           npm run build
+
+      # ── MarkdownPreview 拡張のテスト ──────────────────────
+      - name: Test MarkdownPreview extension
+        working-directory: extensions/markdown-preview
+        run: npm test
