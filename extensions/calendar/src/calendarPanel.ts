@@ -35,15 +35,25 @@ export class CalendarPanel {
       vscode.ViewColumn.One,
       {
         enableScripts: true,
-        localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'media')],
+        localResourceRoots: [
+          vscode.Uri.joinPath(context.extensionUri, 'media'),
+        ],
         retainContextWhenHidden: true,
-      }
+      },
     );
 
-    CalendarPanel.currentPanel = new CalendarPanel(panel, context.extensionUri, workspaceRoot);
+    CalendarPanel.currentPanel = new CalendarPanel(
+      panel,
+      context.extensionUri,
+      workspaceRoot,
+    );
   }
 
-  private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, workspaceRoot: string) {
+  private constructor(
+    panel: vscode.WebviewPanel,
+    extensionUri: vscode.Uri,
+    workspaceRoot: string,
+  ) {
     this._panel = panel;
     this._extensionUri = extensionUri;
     this._workspaceRoot = workspaceRoot;
@@ -56,17 +66,22 @@ export class CalendarPanel {
     this._panel.webview.html = this._getHtmlForWebview();
 
     this._panel.webview.onDidReceiveMessage(
-      message => this._handleMessage(message),
+      (message) => this._handleMessage(message),
       null,
-      this._disposables
+      this._disposables,
     );
 
     // public/ 配下のファイル変更を監視して自動リロード通知
-    const publicPattern = new vscode.RelativePattern(workspaceRoot, 'public/**/*.md');
+    const publicPattern = new vscode.RelativePattern(
+      workspaceRoot,
+      'public/**/*.md',
+    );
     const watcher = vscode.workspace.createFileSystemWatcher(publicPattern);
     let debounceTimer: ReturnType<typeof setTimeout> | undefined;
     const notifyReload = () => {
-      if (debounceTimer) { clearTimeout(debounceTimer); }
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
       debounceTimer = setTimeout(() => {
         this._panel.webview.postMessage({ type: 'fileChanged' });
       }, 500);
@@ -77,10 +92,16 @@ export class CalendarPanel {
     this._disposables.push(watcher);
 
     // .git/HEAD の変更を監視してブランチ切替を検知
-    const gitHeadPattern = new vscode.RelativePattern(workspaceRoot, '.git/HEAD');
-    const gitHeadWatcher = vscode.workspace.createFileSystemWatcher(gitHeadPattern);
+    const gitHeadPattern = new vscode.RelativePattern(
+      workspaceRoot,
+      '.git/HEAD',
+    );
+    const gitHeadWatcher =
+      vscode.workspace.createFileSystemWatcher(gitHeadPattern);
     const notifyBranchChange = () => {
-      if (debounceTimer) { clearTimeout(debounceTimer); }
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
       debounceTimer = setTimeout(() => {
         this._panel.webview.postMessage({ type: 'fileChanged' });
       }, 300);
@@ -96,14 +117,18 @@ export class CalendarPanel {
     this._panel.dispose();
     while (this._disposables.length) {
       const d = this._disposables.pop();
-      if (d) { d.dispose(); }
+      if (d) {
+        d.dispose();
+      }
     }
   }
 
   // === メッセージハンドラ ===
 
   private async _handleMessage(message: any) {
-    if (message.type !== 'request') { return; }
+    if (message.type !== 'request') {
+      return;
+    }
     const { id, command } = message;
 
     try {
@@ -116,7 +141,7 @@ export class CalendarPanel {
 
         case 'getArticlesByMonth': {
           const all = this._articleParser.parseAll();
-          data = all.filter(a => {
+          data = all.filter((a) => {
             const [y, m] = a.displayDate.split('-').map(Number);
             return y === message.year && m === message.month;
           });
@@ -186,7 +211,11 @@ export class CalendarPanel {
 
       this._panel.webview.postMessage({ type: 'response', id, data });
     } catch (err: any) {
-      this._panel.webview.postMessage({ type: 'response', id, error: err.message });
+      this._panel.webview.postMessage({
+        type: 'response',
+        id,
+        error: err.message,
+      });
     }
   }
 
@@ -201,18 +230,30 @@ export class CalendarPanel {
     const validModes = ['public', 'private', 'scheduled'];
     const mode = (req.mode || 'public').toLowerCase();
     if (!validModes.includes(mode)) {
-      return { success: false, error: '記事種別が不正です（public / private / scheduled）' };
+      return {
+        success: false,
+        error: '記事種別が不正です（public / private / scheduled）',
+      };
     }
 
     // 日付の決定
     let articleDate: Date;
     if (mode === 'scheduled') {
-      if (!req.date) { return { success: false, error: '予約投稿には日付が必須です' }; }
+      if (!req.date) {
+        return { success: false, error: '予約投稿には日付が必須です' };
+      }
       articleDate = new Date(req.date + 'T00:00:00');
-      if (isNaN(articleDate.getTime())) { return { success: false, error: '日付の形式が不正です（YYYY-MM-DD）' }; }
+      if (isNaN(articleDate.getTime())) {
+        return { success: false, error: '日付の形式が不正です（YYYY-MM-DD）' };
+      }
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      if (articleDate <= today) { return { success: false, error: '予約投稿日は明日以降を指定してください' }; }
+      if (articleDate <= today) {
+        return {
+          success: false,
+          error: '予約投稿日は明日以降を指定してください',
+        };
+      }
     } else {
       articleDate = new Date();
     }
@@ -227,7 +268,10 @@ export class CalendarPanel {
     const filePath = path.join(subDir, `${slug}.md`);
 
     if (fs.existsSync(filePath)) {
-      return { success: false, error: `同名の記事ファイルが既に存在します: ${slug}.md` };
+      return {
+        success: false,
+        error: `同名の記事ファイルが既に存在します: ${slug}.md`,
+      };
     }
 
     // ブランチ操作
@@ -235,7 +279,10 @@ export class CalendarPanel {
     if (req.createBranch) {
       const r1 = this._gitService.runGit('checkout main');
       if (!r1.success) {
-        return { success: false, error: `main への切り替えに失敗しました: ${r1.output}` };
+        return {
+          success: false,
+          error: `main への切り替えに失敗しました: ${r1.output}`,
+        };
       }
 
       this._gitService.runGit('pull');
@@ -244,45 +291,73 @@ export class CalendarPanel {
       branch = `add-${safeBranchSlug}`;
       const r2 = this._gitService.runGit(`checkout -b ${branch}`);
       if (!r2.success) {
-        return { success: false, error: `ブランチの作成に失敗しました: ${r2.output}` };
+        return {
+          success: false,
+          error: `ブランチの作成に失敗しました: ${r2.output}`,
+        };
       }
     }
 
     // Front Matter 生成
     const isPrivate = mode === 'private' ? 'true' : 'false';
     const isScheduled = mode === 'scheduled';
-    const scheduledLine = isScheduled ? `\nscheduled_publish: "${req.date}"` : '';
+    const scheduledLine = isScheduled
+      ? `\nscheduled_publish: "${req.date}"`
+      : '';
 
-    const content =
-      `---\ntitle: ''\ntags:\n  - ''\nprivate: ${isPrivate}\nupdated_at: ''\nid: null\norganization_url_name: null\nslide: false\nignorePublish: true${scheduledLine}\n---\n\n`;
+    const content = `---\ntitle: ''\ntags:\n  - ''\nprivate: ${isPrivate}\nupdated_at: ''\nid: null\norganization_url_name: null\nslide: false\nignorePublish: true${scheduledLine}\n---\n\n`;
 
     if (!fs.existsSync(subDir)) {
       fs.mkdirSync(subDir, { recursive: true });
     }
     fs.writeFileSync(filePath, content, 'utf-8');
 
-    const modeLabel = mode === 'private' ? '限定共有' : mode === 'scheduled' ? '予約投稿' : '公開';
+    const modeLabel =
+      mode === 'private'
+        ? '限定共有'
+        : mode === 'scheduled'
+          ? '予約投稿'
+          : '公開';
     const dateStr = `${y}-${m}-${d}`;
 
-    return { success: true, slug, filePath: `public/${y}/${m}/${slug}.md`, date: dateStr, branch, mode, modeLabel };
+    return {
+      success: true,
+      slug,
+      filePath: `public/${y}/${m}/${slug}.md`,
+      date: dateStr,
+      branch,
+      mode,
+      modeLabel,
+    };
   }
 
   // === 記事リスケジュール ===
 
   private _rescheduleArticle(slug: string, newDate: string): any {
-    if (!slug?.trim()) { return { success: false, error: 'スラッグが指定されていません' }; }
-    if (!newDate?.trim()) { return { success: false, error: '移動先の日付が指定されていません' }; }
+    if (!slug?.trim()) {
+      return { success: false, error: 'スラッグが指定されていません' };
+    }
+    if (!newDate?.trim()) {
+      return { success: false, error: '移動先の日付が指定されていません' };
+    }
 
     const dateMatch = newDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!dateMatch) { return { success: false, error: '日付の形式が不正です（YYYY-MM-DD）' }; }
+    if (!dateMatch) {
+      return { success: false, error: '日付の形式が不正です（YYYY-MM-DD）' };
+    }
 
     const oldPath = this._resolveArticlePath(slug);
     if (!fs.existsSync(oldPath)) {
-      return { success: false, error: `記事ファイルが見つかりません: ${slug}.md` };
+      return {
+        success: false,
+        error: `記事ファイルが見つかりません: ${slug}.md`,
+      };
     }
 
-    const article = this._articleParser.parseAll().find(a => a.slug === slug);
-    if (!article) { return { success: false, error: '記事の解析に失敗しました' }; }
+    const article = this._articleParser.parseAll().find((a) => a.slug === slug);
+    if (!article) {
+      return { success: false, error: '記事の解析に失敗しました' };
+    }
 
     if (article.status === 'Published') {
       return { success: false, error: '投稿済みの記事は移動できません' };
@@ -301,11 +376,18 @@ export class CalendarPanel {
     const titlePart = slugDateMatch ? slugDateMatch[2] : slug;
     const newDateForFile = newDate.replace(/-/g, '');
     const newSlug = `${newDateForFile}-${titlePart}`;
-    const newDir = path.join(this._publicDir, newDate.substring(0, 4), newDate.substring(5, 7));
+    const newDir = path.join(
+      this._publicDir,
+      newDate.substring(0, 4),
+      newDate.substring(5, 7),
+    );
     const newPath = path.join(newDir, `${newSlug}.md`);
 
     if (oldPath !== newPath && fs.existsSync(newPath)) {
-      return { success: false, error: `移動先に同名のファイルが既に存在します: ${newSlug}.md` };
+      return {
+        success: false,
+        error: `移動先に同名のファイルが既に存在します: ${newSlug}.md`,
+      };
     }
 
     // Front Matter の scheduled_publish を更新（存在しない場合は追加）
@@ -315,23 +397,29 @@ export class CalendarPanel {
 
     if (isToday) {
       // scheduled_publish を除去（ダブルクォート・シングルクォート・クォートなしに対応）
-      content = content.replace(/\r?\nscheduled_publish:\s*(?:"[^"]*"|'[^']*'|\S+)/, '');
+      content = content.replace(
+        /\r?\nscheduled_publish:\s*(?:"[^"]*"|'[^']*'|\S+)/,
+        '',
+      );
       // ignorePublish を false に変更（投稿準備状態にする）
       if (/ignorePublish:\s*true/i.test(content)) {
-        content = content.replace(/ignorePublish:\s*true/i, 'ignorePublish: false');
+        content = content.replace(
+          /ignorePublish:\s*true/i,
+          'ignorePublish: false',
+        );
         readyForPublish = true;
       }
     } else if (/scheduled_publish:\s*(?:"[^"]*"|'[^']*'|\S+)/.test(content)) {
       content = content.replace(
         /scheduled_publish:\s*(?:"[^"]*"|'[^']*'|\S+)/,
-        `scheduled_publish: "${newDate}"`
+        `scheduled_publish: "${newDate}"`,
       );
     } else {
       // scheduled_publish が存在しない場合、Front Matter の末尾（閉じ --- の前）に追加
       // CRLF / LF 両対応
       content = content.replace(
         /^(---\r?\n[\s\S]*?\r?\n)(---)/m,
-        `$1scheduled_publish: "${newDate}"\n$2`
+        `$1scheduled_publish: "${newDate}"\n$2`,
       );
     }
 
@@ -351,15 +439,22 @@ export class CalendarPanel {
   // === 記事の日付除去 ===
 
   private _removeArticleDate(slug: string): any {
-    if (!slug?.trim()) { return { success: false, error: 'スラッグが指定されていません' }; }
+    if (!slug?.trim()) {
+      return { success: false, error: 'スラッグが指定されていません' };
+    }
 
     const oldPath = this._resolveArticlePath(slug);
     if (!fs.existsSync(oldPath)) {
-      return { success: false, error: `記事ファイルが見つかりません: ${slug}.md` };
+      return {
+        success: false,
+        error: `記事ファイルが見つかりません: ${slug}.md`,
+      };
     }
 
-    const article = this._articleParser.parseAll().find(a => a.slug === slug);
-    if (!article) { return { success: false, error: '記事の解析に失敗しました' }; }
+    const article = this._articleParser.parseAll().find((a) => a.slug === slug);
+    if (!article) {
+      return { success: false, error: '記事の解析に失敗しました' };
+    }
 
     if (article.status === 'Published') {
       return { success: false, error: '投稿済みの記事は移動できません' };
@@ -367,7 +462,10 @@ export class CalendarPanel {
 
     const match = slug.match(/^(\d{8})-(.+)$/);
     if (!match) {
-      return { success: false, error: 'この記事には日付プレフィックスがありません' };
+      return {
+        success: false,
+        error: 'この記事には日付プレフィックスがありません',
+      };
     }
 
     const titlePart = match[2];
@@ -381,12 +479,18 @@ export class CalendarPanel {
     const newPath = path.join(this._publicDir, `${newSlug}.md`);
 
     if (fs.existsSync(newPath)) {
-      return { success: false, error: `同名のファイルが既に存在します: ${newSlug}.md` };
+      return {
+        success: false,
+        error: `同名のファイルが既に存在します: ${newSlug}.md`,
+      };
     }
 
     // scheduled_publish を削除（ダブルクォート・シングルクォート・クォートなしに対応）
     let content = fs.readFileSync(oldPath, 'utf-8');
-    content = content.replace(/scheduled_publish:\s*(?:"[^"]*"|'[^']*'|\S+)\r?\n?/, '');
+    content = content.replace(
+      /scheduled_publish:\s*(?:"[^"]*"|'[^']*'|\S+)\r?\n?/,
+      '',
+    );
 
     fs.writeFileSync(newPath, content, 'utf-8');
     fs.unlinkSync(oldPath);
@@ -397,51 +501,73 @@ export class CalendarPanel {
   // === フィールドトグル ===
 
   private _togglePrivate(slug: string): any {
-    if (!slug?.trim()) { return { success: false, error: 'スラッグが指定されていません' }; }
+    if (!slug?.trim()) {
+      return { success: false, error: 'スラッグが指定されていません' };
+    }
 
     const filePath = this._resolveArticlePath(slug);
     if (!fs.existsSync(filePath)) {
-      return { success: false, error: `記事ファイルが見つかりません: ${slug}.md` };
+      return {
+        success: false,
+        error: `記事ファイルが見つかりません: ${slug}.md`,
+      };
     }
 
-    const article = this._articleParser.parseAll().find(a => a.slug === slug);
-    if (!article) { return { success: false, error: '記事の解析に失敗しました' }; }
+    const article = this._articleParser.parseAll().find((a) => a.slug === slug);
+    if (!article) {
+      return { success: false, error: '記事の解析に失敗しました' };
+    }
 
     if (article.status === 'Published') {
-      return { success: false, error: '投稿済みの記事の公開設定は Qiita Web 上で変更してください' };
+      return {
+        success: false,
+        error: '投稿済みの記事の公開設定は Qiita Web 上で変更してください',
+      };
     }
 
     let content = fs.readFileSync(filePath, 'utf-8');
     const newValue = !article.isPrivate;
     content = content.replace(
       /private:\s*(true|false)/,
-      `private: ${newValue}`
+      `private: ${newValue}`,
     );
     fs.writeFileSync(filePath, content, 'utf-8');
 
     return {
-      success: true, slug, newValue,
+      success: true,
+      slug,
+      newValue,
       label: newValue ? '限定共有' : '公開',
     };
   }
 
   private _toggleIgnorePublish(slug: string): any {
-    if (!slug?.trim()) { return { success: false, error: 'スラッグが指定されていません' }; }
+    if (!slug?.trim()) {
+      return { success: false, error: 'スラッグが指定されていません' };
+    }
 
     const filePath = this._resolveArticlePath(slug);
     if (!fs.existsSync(filePath)) {
-      return { success: false, error: `記事ファイルが見つかりません: ${slug}.md` };
+      return {
+        success: false,
+        error: `記事ファイルが見つかりません: ${slug}.md`,
+      };
     }
 
-    const article = this._articleParser.parseAll().find(a => a.slug === slug);
-    if (!article) { return { success: false, error: '記事の解析に失敗しました' }; }
+    const article = this._articleParser.parseAll().find((a) => a.slug === slug);
+    if (!article) {
+      return { success: false, error: '記事の解析に失敗しました' };
+    }
 
     if (article.status === 'Published') {
       return { success: false, error: '投稿済みの記事は変更できません' };
     }
 
     if (article.status === 'Scheduled' || article.status === 'ScheduledPast') {
-      return { success: false, error: '予約投稿記事の投稿準備状態は変更できません' };
+      return {
+        success: false,
+        error: '予約投稿記事の投稿準備状態は変更できません',
+      };
     }
 
     let content = fs.readFileSync(filePath, 'utf-8');
@@ -450,13 +576,16 @@ export class CalendarPanel {
     const newIgnorePublish = article.status === 'Ready';
     content = content.replace(
       /ignorePublish:\s*(true|false)/i,
-      `ignorePublish: ${newIgnorePublish}`
+      `ignorePublish: ${newIgnorePublish}`,
     );
     fs.writeFileSync(filePath, content, 'utf-8');
 
     const newStatus = newIgnorePublish ? 'Draft' : 'Ready';
     return {
-      success: true, slug, newIgnorePublish, newStatus,
+      success: true,
+      slug,
+      newIgnorePublish,
+      newStatus,
       label: newStatus === 'Ready' ? '投稿準備完了' : '下書き',
     };
   }
@@ -499,13 +628,13 @@ export class CalendarPanel {
   private _getHtmlForWebview(): string {
     const webview = this._panel.webview;
     const styleUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this._extensionUri, 'media', 'style.css')
+      vscode.Uri.joinPath(this._extensionUri, 'media', 'style.css'),
     );
     const codiconUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this._extensionUri, 'media', 'codicon.css')
+      vscode.Uri.joinPath(this._extensionUri, 'media', 'codicon.css'),
     );
     const scriptUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this._extensionUri, 'media', 'app.js')
+      vscode.Uri.joinPath(this._extensionUri, 'media', 'app.js'),
     );
 
     return /*html*/ `<!DOCTYPE html>

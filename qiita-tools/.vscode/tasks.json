@@ -155,7 +155,7 @@
       "group": "test",
       "dependsOn": ["npm: install"],
       "problemMatcher": []
-    },
+    }
   ],
   "inputs": [
     {

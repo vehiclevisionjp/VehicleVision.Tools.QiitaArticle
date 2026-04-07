@@ -1,7 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-export type ArticleStatus = 'Published' | 'Scheduled' | 'ScheduledPast' | 'Ready' | 'Draft';
+export type ArticleStatus =
+  | 'Published'
+  | 'Scheduled'
+  | 'ScheduledPast'
+  | 'Ready'
+  | 'Draft';
 
 export interface ArticleInfo {
   slug: string;
@@ -42,7 +47,9 @@ export class ArticleParser {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
     for (const entry of entries) {
       if (entry.isDirectory()) {
-        if (entry.name.startsWith('.')) { continue; }
+        if (entry.name.startsWith('.')) {
+          continue;
+        }
         this._walkDir(path.join(dir, entry.name), articles);
       } else if (entry.isFile() && entry.name.endsWith('.md')) {
         const article = this.parseFile(path.join(dir, entry.name));
@@ -73,7 +80,9 @@ export class ArticleParser {
         const day = parseInt(dateStr.substring(6, 8));
 
         const fileDate = new Date(year, month - 1, day);
-        if (isNaN(fileDate.getTime())) { return null; }
+        if (isNaN(fileDate.getTime())) {
+          return null;
+        }
 
         fileDateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         hasDate = true;
@@ -91,7 +100,8 @@ export class ArticleParser {
     const scheduledStr = frontMatter['scheduled_publish'];
     const createdAtStr = frontMatter['created_at'];
     const isPrivate = (frontMatter['private'] || '').toLowerCase() === 'true';
-    const ignorePublish = (frontMatter['ignorepublish'] || 'true').toLowerCase() !== 'false';
+    const ignorePublish =
+      (frontMatter['ignorepublish'] || 'true').toLowerCase() !== 'false';
 
     // ステータス判定
     // Phase 3: Published（id あり）
@@ -129,7 +139,12 @@ export class ArticleParser {
       }
     }
 
-    const displayDate = scheduledDate || (!ignorePublish ? fileDateStr : '') || this.parseDateFromTimestamp(createdAtStr) || this.parseDateFromTimestamp(updatedAtStr) || '';
+    const displayDate =
+      scheduledDate ||
+      (!ignorePublish ? fileDateStr : '') ||
+      this.parseDateFromTimestamp(createdAtStr) ||
+      this.parseDateFromTimestamp(updatedAtStr) ||
+      '';
 
     return {
       slug: fileName,
@@ -139,7 +154,7 @@ export class ArticleParser {
       status,
       scheduledDate,
       updatedAt,
-      qiitaId: (id && id !== 'null') ? id : null,
+      qiitaId: id && id !== 'null' ? id : null,
       isPrivate,
       tags,
       displayDate,
@@ -150,7 +165,10 @@ export class ArticleParser {
    * Front Matter (---...---) を解析しフィールドとタグを返す
    * ブロックスタイルの YAML 配列タグにも対応
    */
-  private extractFrontMatter(filePath: string): { fields: Record<string, string>; tags: string[] } {
+  private extractFrontMatter(filePath: string): {
+    fields: Record<string, string>;
+    tags: string[];
+  } {
     const content = fs.readFileSync(filePath, 'utf-8');
     const lines = content.split(/\r?\n/);
     const fields: Record<string, string> = {};
@@ -163,7 +181,9 @@ export class ArticleParser {
     let inTags = false;
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i];
-      if (line.trim() === '---') { break; }
+      if (line.trim() === '---') {
+        break;
+      }
 
       // タグのブロックスタイル配列を読み取り
       if (inTags) {
@@ -183,9 +203,11 @@ export class ArticleParser {
         if (key === 'tags') {
           if (value) {
             // インラインカンマ区切りタグ
-            value.split(',').forEach(t => {
+            value.split(',').forEach((t) => {
               const trimmed = t.trim().replace(/^['"]|['"]$/g, '');
-              if (trimmed) { tags.push(trimmed); }
+              if (trimmed) {
+                tags.push(trimmed);
+              }
             });
           } else {
             // 次行以降のブロックスタイルタグ
@@ -203,7 +225,9 @@ export class ArticleParser {
   private parseDate(str: string): string | null {
     const cleaned = str.replace(/^['"]|['"]$/g, '').trim();
     const match = cleaned.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!match) { return null; }
+    if (!match) {
+      return null;
+    }
     return cleaned;
   }
 
@@ -211,18 +235,26 @@ export class ArticleParser {
    * ISO 8601 タイムスタンプ (例: 2025-01-14T18:17:00+09:00) から YYYY-MM-DD を抽出
    */
   private parseDateFromTimestamp(str: string | undefined): string | null {
-    if (!str || str === 'null' || str === "''" || str === '""') { return null; }
+    if (!str || str === 'null' || str === "''" || str === '""') {
+      return null;
+    }
     const cleaned = str.replace(/^['"]|['"]$/g, '').trim();
-    if (!cleaned) { return null; }
+    if (!cleaned) {
+      return null;
+    }
 
     // YYYY-MM-DD 形式のみの場合
     const simpleMatch = cleaned.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (simpleMatch) { return cleaned; }
+    if (simpleMatch) {
+      return cleaned;
+    }
 
     // ISO 8601 形式（タイムゾーン付き）からローカル日付を抽出
     try {
       const dt = new Date(cleaned);
-      if (isNaN(dt.getTime())) { return null; }
+      if (isNaN(dt.getTime())) {
+        return null;
+      }
       const y = dt.getFullYear();
       const m = String(dt.getMonth() + 1).padStart(2, '0');
       const d = String(dt.getDate()).padStart(2, '0');

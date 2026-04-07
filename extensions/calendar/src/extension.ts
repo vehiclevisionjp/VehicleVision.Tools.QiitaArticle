@@ -8,7 +8,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('articleCalendar.open', () => {
       CalendarPanel.createOrShow(context);
-    })
+    }),
   );
 
   // 自動オープン

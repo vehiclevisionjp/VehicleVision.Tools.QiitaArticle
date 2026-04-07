@@ -59,17 +59,17 @@
 }
 
 .qiita-note-icon-info::before {
-  content: "ℹ";
+  content: 'ℹ';
   color: #007acc;
 }
 
 .qiita-note-icon-warn::before {
-  content: "⚠";
+  content: '⚠';
   color: #ce9100;
 }
 
 .qiita-note-icon-alert::before {
-  content: "⛔";
+  content: '⛔';
   color: #dc3545;
 }
 
@@ -121,7 +121,12 @@
   padding: 6px 12px;
   font-size: 0.85em;
   font-weight: 600;
-  font-family: var(--vscode-editor-font-family, "Consolas", "Courier New", monospace);
+  font-family: var(
+    --vscode-editor-font-family,
+    'Consolas',
+    'Courier New',
+    monospace
+  );
   border-bottom: 1px solid rgba(128, 128, 128, 0.2);
 }
 
@@ -168,7 +173,7 @@
 .qiita-math-fallback {
   display: inline-block;
   padding: 12px 24px;
-  font-family: "KaTeX_Main", "Times New Roman", serif;
+  font-family: 'KaTeX_Main', 'Times New Roman', serif;
   font-size: 1.1em;
   text-align: center;
   background-color: rgba(128, 128, 128, 0.05);

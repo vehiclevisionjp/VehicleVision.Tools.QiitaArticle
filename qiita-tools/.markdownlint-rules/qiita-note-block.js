@@ -1,6 +1,6 @@
 // @ts-check
 
-"use strict";
+'use strict';
 
 /**
  * Qiita 固有 Markdown 記法の構文を検証するカスタムルール
@@ -13,13 +13,13 @@
  * 参照: resources/qiita-markdown - lib/qiita/markdown/filters/custom_block.rb
  */
 
-const { isPublicArticle } = require("./_helpers");
+const { isPublicArticle } = require('./_helpers');
 
 /** @type {import("markdownlint").Rule} */
 module.exports = {
-  names: ["qiita-note-block", "QFM002"],
-  description: ":::note ブロックの構文が正しいこと",
-  tags: ["qiita", "custom-block"],
+  names: ['qiita-note-block', 'QFM002'],
+  description: ':::note ブロックの構文が正しいこと',
+  tags: ['qiita', 'custom-block'],
   function: function rule(params, onError) {
     if (!isPublicArticle(params.name)) return;
 
@@ -34,7 +34,7 @@ module.exports = {
       const noteOpenMatch = line.match(/^:::note\b(.*)$/);
       if (noteOpenMatch) {
         const rest = noteOpenMatch[1].trim();
-        const validSubTypes = ["", "info", "warn", "alert"];
+        const validSubTypes = ['', 'info', 'warn', 'alert'];
 
         if (!validSubTypes.includes(rest)) {
           onError({
@@ -43,7 +43,7 @@ module.exports = {
           });
         }
 
-        noteStack.push({ lineNumber, type: "note" });
+        noteStack.push({ lineNumber, type: 'note' });
         continue;
       }
 
@@ -52,8 +52,7 @@ module.exports = {
         if (noteStack.length === 0) {
           onError({
             lineNumber,
-            detail:
-              "対応する :::note がない閉じ ::: が見つかりました",
+            detail: '対応する :::note がない閉じ ::: が見つかりました',
           });
         } else {
           noteStack.pop();
@@ -63,7 +62,7 @@ module.exports = {
 
       // :::xxx（note 以外のカスタムブロック）を検出
       const customBlockMatch = line.match(/^:::(\w+)/);
-      if (customBlockMatch && customBlockMatch[1] !== "note") {
+      if (customBlockMatch && customBlockMatch[1] !== 'note') {
         onError({
           lineNumber,
           detail: `Qiita では ":::${customBlockMatch[1]}" はサポートされていません。:::note のみ使用可能です`,

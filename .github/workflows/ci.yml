@@ -1,0 +1,53 @@
+# CI ワークフロー
+# push / PR 時にフォーマットチェックと拡張機能のビルドテストを実行します。
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      # ── フォーマットチェック ───────────────────────────────
+      - name: Check formatting
+        run: |
+          npm install
+          npm run format:check
+
+      # ── Calendar 拡張のビルドテスト ───────────────────────
+      - name: Build Calendar extension
+        working-directory: extensions/calendar
+        run: |
+          npm install
+          npm run build
+
+      # ── Calendar 拡張のテスト ──────────────────────────────
+      - name: Test Calendar extension
+        working-directory: extensions/calendar
+        run: npm test
+
+      # ── MarkdownPreview 拡張のビルドテスト ───────────────
+      - name: Build MarkdownPreview extension
+        working-directory: extensions/markdown-preview
+        run: |
+          npm install
+          npm run build
+
+      # ── MarkdownPreview 拡張のテスト ──────────────────────
+      - name: Test MarkdownPreview extension
+        working-directory: extensions/markdown-preview
+        run: npm test
