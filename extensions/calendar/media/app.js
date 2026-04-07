@@ -933,6 +933,7 @@ function showDetail(slug) {
 
   // トグルボタン（投稿済み以外で表示）
   var toggleButtons = '';
+  var dateChangeSection = '';
   if (article.status !== 'Published') {
     // private トグル
     var privateIcon = article.isPrivate ? '<i class="codicon codicon-unlock"></i> 公開に切替' : '<i class="codicon codicon-lock"></i> 限定共有に切替';
@@ -944,6 +945,30 @@ function showDetail(slug) {
         ? '<i class="codicon codicon-check"></i> 投稿準備にする'
         : '<i class="codicon codicon-edit"></i> 下書きに戻す';
       toggleButtons += '<button class="btn-toggle" onclick="toggleIgnorePublish(\'' + escapeAttr(article.slug) + '\')">' + readyIcon + '</button>';
+    }
+
+    // 日付変更セクション
+    var todayStr = formatDate(new Date());
+    var dateInputVal = article.fileDate || todayStr;
+    if (article.fileDate) {
+      // 日付あり → 変更 or 未定に戻す
+      dateChangeSection =
+        '<div class="date-change-section">' +
+        '<label for="modalDateInput"><i class="codicon codicon-calendar"></i> 日付の変更</label>' +
+        '<div class="date-change-row">' +
+        '<input type="date" id="modalDateInput" value="' + escapeAttr(dateInputVal) + '" min="' + escapeAttr(todayStr) + '" />' +
+        '<button class="btn-date-set" onclick="applyDateChange(\'' + escapeAttr(article.slug) + '\')"><i class="codicon codicon-arrow-right"></i> 日付を変更</button>' +
+        '<button class="btn-date-unset" onclick="removeDateInModal(\'' + escapeAttr(article.slug) + '\')"><i class="codicon codicon-remove"></i> 日付を未定にする</button>' +
+        '</div></div>';
+    } else {
+      // 日付なし（未定）→ 設定
+      dateChangeSection =
+        '<div class="date-change-section">' +
+        '<label for="modalDateInput"><i class="codicon codicon-calendar"></i> 日付の設定</label>' +
+        '<div class="date-change-row">' +
+        '<input type="date" id="modalDateInput" value="' + escapeAttr(dateInputVal) + '" min="' + escapeAttr(todayStr) + '" />' +
+        '<button class="btn-date-set" onclick="applyDateChange(\'' + escapeAttr(article.slug) + '\')"><i class="codicon codicon-arrow-right"></i> 日付を設定</button>' +
+        '</div></div>';
     }
   }
   var toggleSection = toggleButtons ? '<div class="toggle-actions">' + toggleButtons + '</div>' : '';
@@ -959,6 +984,7 @@ function showDetail(slug) {
     (tagsHtml ? '<div style="margin-top:8px">' + tagsHtml + '</div>' : '') +
     '</div>' +
     toggleSection +
+    dateChangeSection +
     '<div class="actions">' +
     qiitaLink +
     editLink +
@@ -1001,6 +1027,48 @@ async function toggleIgnorePublish(slug) {
   } catch (err) {
     console.error('ignorePublish切替エラー:', err);
     showNotification('⚠️ 通信エラーが発生しました');
+  }
+}
+
+async function applyDateChange(slug) {
+  var input = document.getElementById('modalDateInput');
+  var newDate = input ? input.value : '';
+  if (!newDate) {
+    showNotification('⚠️ 日付を選択してください');
+    return;
+  }
+  try {
+    var data = await apiRequest('rescheduleArticle', { slug: slug, newDate: newDate });
+    if (data.success) {
+      closeTooltip();
+      await fetchArticles();
+      render();
+      var msg = '📅 記事を ' + newDate + ' に移動しました（' + data.newSlug + '.md）';
+      if (data.readyForPublish) { msg += '\n✅ 投稿準備に変更しました（ignorePublish: false）'; }
+      showNotification(msg);
+    } else {
+      showNotification('⚠️ ' + (data.error || '移動に失敗しました'));
+    }
+  } catch (err) {
+    console.error('日付変更エラー:', err);
+    showNotification('⚠️ エラー: ' + (err.message || '不明なエラーが発生しました'));
+  }
+}
+
+async function removeDateInModal(slug) {
+  try {
+    var data = await apiRequest('removeArticleDate', { slug: slug });
+    if (data.success) {
+      closeTooltip();
+      await fetchArticles();
+      render();
+      showNotification('📁 記事を日付未定に移動しました（' + data.newSlug + '.md）');
+    } else {
+      showNotification('⚠️ ' + (data.error || '移動に失敗しました'));
+    }
+  } catch (err) {
+    console.error('日付除去エラー:', err);
+    showNotification('⚠️ エラー: ' + (err.message || '不明なエラーが発生しました'));
   }
 }
 
