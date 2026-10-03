@@ -28,13 +28,30 @@ describe('ArticleParser', () => {
   });
 
   it('ステータスを判定する', () => {
-    write('2025/01/20250101-pub.md', fm(["title: 'P'", 'id: abc123', 'ignorePublish: true']));
-    write('2025/01/20250102-draft.md', fm(["title: 'D'", 'id: null', 'ignorePublish: true']));
-    write('2025/01/20250103-ready.md', fm(["title: 'R'", 'id: null', 'ignorePublish: false']));
-    write('2099/01/20990101-sched.md', fm(["title: 'S'", 'id: null', 'scheduled_publish: "2099-01-01"']));
-    write('2020/01/20200101-past.md', fm(["title: 'X'", 'id: null', 'scheduled_publish: "2020-01-01"']));
+    write(
+      '2025/01/20250101-pub.md',
+      fm(["title: 'P'", 'id: abc123', 'ignorePublish: true']),
+    );
+    write(
+      '2025/01/20250102-draft.md',
+      fm(["title: 'D'", 'id: null', 'ignorePublish: true']),
+    );
+    write(
+      '2025/01/20250103-ready.md',
+      fm(["title: 'R'", 'id: null', 'ignorePublish: false']),
+    );
+    write(
+      '2099/01/20990101-sched.md',
+      fm(["title: 'S'", 'id: null', 'scheduled_publish: "2099-01-01"']),
+    );
+    write(
+      '2020/01/20200101-past.md',
+      fm(["title: 'X'", 'id: null', 'scheduled_publish: "2020-01-01"']),
+    );
 
-    const bySlug = Object.fromEntries(new ArticleParser(dir).parseAll().map((a) => [a.slug, a]));
+    const bySlug = Object.fromEntries(
+      new ArticleParser(dir).parseAll().map((a) => [a.slug, a]),
+    );
     expect(bySlug['20250101-pub'].status).toBe('Published');
     expect(bySlug['20250101-pub'].qiitaId).toBe('abc123');
     expect(bySlug['20250102-draft'].status).toBe('Draft');
@@ -62,10 +79,15 @@ describe('ArticleParser', () => {
   });
 
   it('タグ: ブロック形式 / インライン / フロー形式 / 空要素', () => {
-    write('20250101-a.md', fm(['title: a', 'tags:', '  - TypeScript', "  - 'VS Code'", "  - ''"]));
+    write(
+      '20250101-a.md',
+      fm(['title: a', 'tags:', '  - TypeScript', "  - 'VS Code'", "  - ''"]),
+    );
     write('20250102-b.md', fm(['title: b', 'tags: x, y']));
     write('20250103-c.md', fm(['title: c', 'tags: [p, q]']));
-    const by = Object.fromEntries(new ArticleParser(dir).parseAll().map((a) => [a.slug, a.tags]));
+    const by = Object.fromEntries(
+      new ArticleParser(dir).parseAll().map((a) => [a.slug, a.tags]),
+    );
     expect(by['20250101-a']).toEqual(['TypeScript', 'VS Code']);
     expect(by['20250102-b']).toEqual(['x', 'y']);
     expect(by['20250103-c']).toEqual(['p', 'q']);
@@ -73,7 +95,10 @@ describe('ArticleParser', () => {
 
   it('ドットディレクトリはスキップし、CRLF も読める', () => {
     write('.remote/20250101-remote.md', fm(["title: 'R'"]));
-    write('20250102-crlf.md', fm(["title: 'C'", 'private: true']).replace(/\n/g, '\r\n'));
+    write(
+      '20250102-crlf.md',
+      fm(["title: 'C'", 'private: true']).replace(/\n/g, '\r\n'),
+    );
     const list = new ArticleParser(dir).parseAll();
     expect(list.map((a) => a.slug)).toEqual(['20250102-crlf']);
     expect(list[0].isPrivate).toBe(true);
@@ -83,7 +108,9 @@ describe('ArticleParser', () => {
   it('displayDate は scheduled_publish / created_at から決まる', () => {
     write('20250101-a.md', fm(['title: a', 'scheduled_publish: "2099-05-06"']));
     write('20250101-b.md', fm(['title: b', 'created_at: 2025-03-04']));
-    const by = Object.fromEntries(new ArticleParser(dir).parseAll().map((a) => [a.slug, a.displayDate]));
+    const by = Object.fromEntries(
+      new ArticleParser(dir).parseAll().map((a) => [a.slug, a.displayDate]),
+    );
     expect(by['20250101-a']).toBe('2099-05-06');
     expect(by['20250101-b']).toBe('2025-03-04');
   });

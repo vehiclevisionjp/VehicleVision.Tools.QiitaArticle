@@ -1,4 +1,4 @@
-@use "themes" as *;
+@use 'themes' as *;
 
 // :::note ブロック
 // Qiita と同様に、淡い背景 + 左上アイコンの角丸ボックスで表示する。
@@ -61,14 +61,14 @@
 }
 
 .qiita-note-icon-info::before {
-  content: "i";
+  content: 'i';
   font-family: serif;
   font-style: italic;
 }
 
 .qiita-note-icon-warn::before,
 .qiita-note-icon-alert::before {
-  content: "!";
+  content: '!';
 }
 
 // ダークテーマ対応

@@ -3,8 +3,8 @@
 // VS Code の Markdown プレビューに Qiita 固有構文のスタイルを適用する。
 // 読み込み順がそのままカスケード順になる。
 
-@use "base";
-@use "note";
-@use "code";
-@use "blocks";
-@use "embed";
+@use 'base';
+@use 'note';
+@use 'code';
+@use 'blocks';
+@use 'embed';

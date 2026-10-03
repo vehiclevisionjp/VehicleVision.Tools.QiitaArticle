@@ -15,7 +15,9 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   z-index: 200;
   opacity: 0;
-  transition: opacity 0.3s, transform 0.3s;
+  transition:
+    opacity 0.3s,
+    transform 0.3s;
   white-space: nowrap;
 
   &.show {
@@ -46,7 +48,9 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  transition: background 0.15s, transform 0.1s;
+  transition:
+    background 0.15s,
+    transform 0.1s;
 
   &:hover:not(:disabled) {
     background: var(--hover);
@@ -144,7 +148,9 @@
   font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s, transform 0.1s;
+  transition:
+    background 0.15s,
+    transform 0.1s;
 
   &:hover {
     filter: brightness(0.9);
@@ -209,7 +215,9 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  transition: background 0.2s, opacity 0.2s;
+  transition:
+    background 0.2s,
+    opacity 0.2s;
 
   &:hover {
     background: #0a6b30;

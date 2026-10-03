@@ -16,7 +16,9 @@
   line-height: 1;
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.15s, transform 0.15s;
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -67,7 +69,7 @@
 .mode-option {
   cursor: pointer;
 
-  input[type="radio"] {
+  input[type='radio'] {
     display: none;
   }
 }
@@ -84,19 +86,19 @@
   transition: all 0.15s;
 }
 
-.mode-option input[type="radio"]:checked + .mode-label.published {
+.mode-option input[type='radio']:checked + .mode-label.published {
   background: var(--published-bg);
   color: var(--published);
   border-color: var(--published);
 }
 
-.mode-option input[type="radio"]:checked + .mode-label.private {
+.mode-option input[type='radio']:checked + .mode-label.private {
   background: var(--private-bg);
   color: var(--private);
   border-color: var(--private);
 }
 
-.mode-option input[type="radio"]:checked + .mode-label.scheduled {
+.mode-option input[type='radio']:checked + .mode-label.scheduled {
   background: var(--scheduled-bg);
   color: var(--scheduled);
   border-color: var(--scheduled);
@@ -173,7 +175,7 @@
   font-size: 0.9rem;
   font-weight: 500;
 
-  input[type="checkbox"] {
+  input[type='checkbox'] {
     width: 16px;
     height: 16px;
     accent-color: var(--scheduled);

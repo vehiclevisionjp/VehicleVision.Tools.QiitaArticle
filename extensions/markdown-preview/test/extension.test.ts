@@ -9,7 +9,10 @@ import { activate } from '../src/extension';
 const ROOT = path.resolve('/ws/articles');
 const doc = (rel: string) => path.join(ROOT, rel);
 
-function render(src: string, currentDocument: string | undefined = doc('public/a.md')) {
+function render(
+  src: string,
+  currentDocument: string | undefined = doc('public/a.md'),
+) {
   const md = activate().extendMarkdownIt(new MarkdownIt({ html: true }));
   return md.render(src, currentDocument ? { currentDocument } : {});
 }
@@ -30,7 +33,10 @@ describe('対象ドキュメントの判定（マルチルート）', () => {
       { uri: { fsPath: ROOT }, name: 'articles' },
       { uri: { fsPath: path.resolve('/ws/other') }, name: 'other' },
     ];
-    const html = render('a\nb\n\n:::note info\nx\n:::\n\n- [x] t', path.resolve('/ws/other/README.md'));
+    const html = render(
+      'a\nb\n\n:::note info\nx\n:::\n\n- [x] t',
+      path.resolve('/ws/other/README.md'),
+    );
     expect(html).not.toContain('<br>');
     expect(html).not.toContain('qiita-note');
     expect(html).not.toContain('qiita-task');
@@ -76,7 +82,9 @@ describe(':::note', () => {
   it('コードフェンス内の ::: では閉じない', () => {
     const html = render(':::note info\n```\n:::\n```\nafter\n:::\n');
     expect(html).toContain('after');
-    expect(html.indexOf('after')).toBeLessThan(html.lastIndexOf('</div></div>'));
+    expect(html.indexOf('after')).toBeLessThan(
+      html.lastIndexOf('</div></div>'),
+    );
   });
 
   it('閉じがなければ note にしない', () => {
@@ -112,7 +120,13 @@ describe('コードブロック', () => {
 
 describe('インラインカラー', () => {
   it('HEX / rgb / hsl にスウォッチを付ける', () => {
-    for (const c of ['#fff', '#FF00AA', 'rgb(1, 2, 3)', 'rgba(1,2,3,0.5)', 'hsl(10, 20%, 30%)']) {
+    for (const c of [
+      '#fff',
+      '#FF00AA',
+      'rgb(1, 2, 3)',
+      'rgba(1,2,3,0.5)',
+      'hsl(10, 20%, 30%)',
+    ]) {
       expect(render('`' + c + '`'), c).toContain('qiita-inline-color');
     }
   });
@@ -143,7 +157,9 @@ describe('数式', () => {
 describe('脚注', () => {
   it('参照順に番号を振り、定義順には依存しない', () => {
     const html = render('A[^b] B[^a]\n\n[^a]: first\n[^b]: second');
-    expect(html.indexOf('href="#fn-1"')).toBeLessThan(html.indexOf('href="#fn-2"'));
+    expect(html.indexOf('href="#fn-1"')).toBeLessThan(
+      html.indexOf('href="#fn-2"'),
+    );
     expect(html).toMatch(/<li id="fn-1"[^>]*><p>second/);
     expect(html).toMatch(/<li id="fn-2"[^>]*><p>first/);
   });
@@ -196,7 +212,9 @@ describe('埋め込み', () => {
   });
 
   it('文章中の URL は埋め込みにしない', () => {
-    expect(render('see https://example.com/page now')).not.toContain('qiita-embed');
+    expect(render('see https://example.com/page now')).not.toContain(
+      'qiita-embed',
+    );
   });
 
   it('URL の HTML をエスケープする', () => {

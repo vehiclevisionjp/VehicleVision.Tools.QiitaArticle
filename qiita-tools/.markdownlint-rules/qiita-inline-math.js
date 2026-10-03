@@ -1,6 +1,6 @@
 // @ts-check
 
-"use strict";
+'use strict';
 
 /**
  * Qiita インライン数式の構文を検証するカスタムルール
@@ -12,13 +12,13 @@
  * 参照: resources/qiita-markdown - lib/qiita/markdown/filters/inline_math.rb
  */
 
-const { isPublicArticle } = require("./_helpers");
+const { isPublicArticle } = require('./_helpers');
 
 /** @type {import("markdownlint").Rule} */
 module.exports = {
-  names: ["qiita-inline-math", "QFM007"],
-  description: "インライン数式（$...$）の構文が正しいこと",
-  tags: ["qiita", "math", "inline"],
+  names: ['qiita-inline-math', 'QFM007'],
+  description: 'インライン数式（$...$）の構文が正しいこと',
+  tags: ['qiita', 'math', 'inline'],
   function: function rule(params, onError) {
     if (!isPublicArticle(params.name)) return;
 
@@ -48,8 +48,8 @@ module.exports = {
       // まず、数式でないインラインコード（`...`）を除去してから検証する
       // $`...`$ 形式のインライン数式は残し、通常のインラインコードのみ除去
       const lineWithoutInlineCode = line
-        .replace(/\$`[^`]*`\$/g, "QIITA_INLINE_MATH_PLACEHOLDER")
-        .replace(/`[^`]*`/g, "");
+        .replace(/\$`[^`]*`\$/g, 'QIITA_INLINE_MATH_PLACEHOLDER')
+        .replace(/`[^`]*`/g, '');
 
       // プレースホルダーで置換した $`...`$ は正しい形式なのでスキップ
       // 残った片方のドルサインだけでバッククォートがある場合を検出
@@ -71,7 +71,7 @@ module.exports = {
       );
       if (backtickDollarOnly) {
         for (const match of backtickDollarOnly) {
-          if (!lineWithoutInlineCode.includes("$" + match.slice(0, -1))) {
+          if (!lineWithoutInlineCode.includes('$' + match.slice(0, -1))) {
             onError({
               lineNumber,
               detail: `インライン数式の開き "$" がありません: "${match}" → "$\`...\`$" の形式にしてください`,

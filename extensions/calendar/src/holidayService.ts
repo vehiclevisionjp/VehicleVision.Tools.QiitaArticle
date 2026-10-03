@@ -1,5 +1,10 @@
 import * as https from 'https';
-import { buildIcsUrl, isObservance, parseIcsEvents, IcsEvent } from './icsParser';
+import {
+  buildIcsUrl,
+  isObservance,
+  parseIcsEvents,
+  IcsEvent,
+} from './icsParser';
 
 export interface HolidayInfo {
   date: string;
@@ -13,7 +18,8 @@ export interface HolidayResult {
 }
 
 /** 祝日の既定の取得元（Google カレンダー「日本の祝日」） */
-export const DEFAULT_HOLIDAY_CALENDAR_ID = 'ja.japanese.official#holiday@group.v.calendar.google.com';
+export const DEFAULT_HOLIDAY_CALENDAR_ID =
+  'ja.japanese.official#holiday@group.v.calendar.google.com';
 
 /** Google カレンダーの ICS は全期間を含むため、取得結果は一定時間キャッシュする */
 const ICS_TTL_MS = 6 * 60 * 60 * 1000;
@@ -49,9 +55,13 @@ export class HolidayService {
     }
 
     try {
-      const result = source ? await this.fromCalendar(source, year) : await this.fromHolidaysJp(year);
+      const result = source
+        ? await this.fromCalendar(source, year)
+        : await this.fromHolidaysJp(year);
       this.cache.set(key, result);
-      console.log(`📅 ${year}年の祝日を取得しました (${result.holidays.length}件)`);
+      console.log(
+        `📅 ${year}年の祝日を取得しました (${result.holidays.length}件)`,
+      );
       return result;
     } catch (err: any) {
       const label = source ? 'Google カレンダー' : '祝日API';
@@ -66,7 +76,9 @@ export class HolidayService {
   }
 
   private async fromHolidaysJp(year: number): Promise<HolidayResult> {
-    const json = await this.fetcher(`https://holidays-jp.github.io/api/v1/${year}/date.json`);
+    const json = await this.fetcher(
+      `https://holidays-jp.github.io/api/v1/${year}/date.json`,
+    );
     const dict = JSON.parse(json) as Record<string, string>;
     const holidays = Object.entries(dict)
       .map(([date, name]) => ({ date, name }))
@@ -74,13 +86,18 @@ export class HolidayService {
     return { success: true, error: null, holidays };
   }
 
-  private async fromCalendar(source: string, year: number): Promise<HolidayResult> {
+  private async fromCalendar(
+    source: string,
+    year: number,
+  ): Promise<HolidayResult> {
     const url = buildIcsUrl(source);
     let entry = this.icsCache.get(url);
     if (!entry || Date.now() - entry.at > ICS_TTL_MS) {
       const text = await this.fetcher(url);
       if (!text.includes('BEGIN:VCALENDAR')) {
-        throw new Error('カレンダーを取得できませんでした（ID が正しいか、カレンダーが公開されているか確認してください）');
+        throw new Error(
+          'カレンダーを取得できませんでした（ID が正しいか、カレンダーが公開されているか確認してください）',
+        );
       }
       entry = { at: Date.now(), events: parseIcsEvents(text) };
       this.icsCache.set(url, entry);
@@ -98,13 +115,21 @@ function fetchText(url: string, redirectsLeft: number): Promise<string> {
   return new Promise((resolve, reject) => {
     const req = https.get(url, { timeout: 10_000 }, (res) => {
       // リダイレクト対応
-      if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+      if (
+        res.statusCode &&
+        res.statusCode >= 300 &&
+        res.statusCode < 400 &&
+        res.headers.location
+      ) {
         res.resume();
         if (redirectsLeft <= 0) {
           reject(new Error('リダイレクトが多すぎます'));
           return;
         }
-        fetchText(new URL(res.headers.location, url).toString(), redirectsLeft - 1).then(resolve, reject);
+        fetchText(
+          new URL(res.headers.location, url).toString(),
+          redirectsLeft - 1,
+        ).then(resolve, reject);
         return;
       }
 

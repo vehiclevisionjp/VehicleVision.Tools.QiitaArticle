@@ -59,7 +59,9 @@ button .codicon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s, transform 0.15s;
+  transition:
+    background 0.15s,
+    transform 0.15s;
 
   .codicon {
     font-size: 1.1rem;
@@ -82,8 +84,12 @@ button .codicon {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .btn-new-article {
@@ -102,7 +108,9 @@ button .codicon {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  transition: background 0.15s, transform 0.1s;
+  transition:
+    background 0.15s,
+    transform 0.1s;
 
   &:hover:not(:disabled) {
     background: #0047b3;
@@ -134,7 +142,9 @@ button .codicon {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  transition: background 0.15s, transform 0.1s;
+  transition:
+    background 0.15s,
+    transform 0.1s;
 
   &:hover {
     background: var(--hover);

@@ -8,7 +8,11 @@ import { GitService } from '../src/gitService';
 let repo: string;
 
 const git = (...args: string[]) =>
-  execFileSync('git', args, { cwd: repo, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  execFileSync('git', args, {
+    cwd: repo,
+    encoding: 'utf-8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  }).trim();
 
 function write(rel: string, content = 'x\n') {
   const p = path.join(repo, rel);
@@ -34,11 +38,19 @@ describe('GitService', () => {
   it('デフォルトブランチと現在のブランチを判定する', async () => {
     const svc = new GitService(repo);
     expect(await svc.getDefaultBranch()).toBe('main');
-    expect(await svc.getCurrentBranch()).toMatchObject({ success: true, branch: 'main', isDefault: true });
+    expect(await svc.getCurrentBranch()).toMatchObject({
+      success: true,
+      branch: 'main',
+      isDefault: true,
+    });
 
     git('checkout', '-q', '-b', 'feature');
     const cur = await new GitService(repo).getCurrentBranch();
-    expect(cur).toMatchObject({ branch: 'feature', defaultBranch: 'main', isDefault: false });
+    expect(cur).toMatchObject({
+      branch: 'feature',
+      defaultBranch: 'main',
+      isDefault: false,
+    });
   });
 
   it('master がデフォルトのリポジトリも判定できる', async () => {
@@ -51,7 +63,9 @@ describe('GitService', () => {
     write('other.txt');
     const st = await new GitService(repo).getStatus();
     expect(st.hasChanges).toBe(true);
-    expect(st.files.map((f) => f.path)).toEqual(['public/2025/01/20250102-new.md']);
+    expect(st.files.map((f) => f.path)).toEqual([
+      'public/2025/01/20250102-new.md',
+    ]);
   });
 
   it('サブディレクトリをワークスペースにしても相対パスで返る', async () => {
@@ -69,7 +83,9 @@ describe('GitService', () => {
     const res = await new GitService(repo).commit(message, false);
     expect(res.success).toBe(true);
     expect(git('log', '-1', '--format=%s')).toBe(message);
-    expect(git('show', '--name-only', '--format=', 'HEAD')).toBe('public/2025/01/20250102-new.md');
+    expect(git('show', '--name-only', '--format=', 'HEAD')).toBe(
+      'public/2025/01/20250102-new.md',
+    );
     expect(git('status', '--porcelain')).toContain('staged-other.txt');
   });
 
@@ -89,7 +105,11 @@ describe('GitService', () => {
 
     const { files } = await new GitService(repo).getBranchFiles();
     expect(files.sort()).toEqual(
-      ['2025/01/20250101-base', '2025/02/20250201-committed', '2025/02/20250202-untracked'].sort(),
+      [
+        '2025/01/20250101-base',
+        '2025/02/20250201-committed',
+        '2025/02/20250202-untracked',
+      ].sort(),
     );
   });
 
@@ -98,7 +118,9 @@ describe('GitService', () => {
     const svc = new GitService(repo);
     expect((await svc.checkoutDefaultAndPull()).success).toBe(true);
     expect(git('branch', '--show-current')).toBe('main');
-    expect((await svc.createBranch('add-20250101-日本語&x')).success).toBe(true);
+    expect((await svc.createBranch('add-20250101-日本語&x')).success).toBe(
+      true,
+    );
     expect(git('branch', '--show-current')).toBe('add-20250101-日本語&x');
   });
 

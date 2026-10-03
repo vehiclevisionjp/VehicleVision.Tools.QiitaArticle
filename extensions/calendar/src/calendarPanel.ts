@@ -9,7 +9,10 @@ import { removeField, setField } from './frontMatter';
 /** Qiita 記事リポジトリとみなす条件: qiita.config.json または public/ がある */
 function isQiitaFolder(folder: vscode.WorkspaceFolder): boolean {
   const root = folder.uri.fsPath;
-  return fs.existsSync(path.join(root, 'qiita.config.json')) || fs.existsSync(path.join(root, 'public'));
+  return (
+    fs.existsSync(path.join(root, 'qiita.config.json')) ||
+    fs.existsSync(path.join(root, 'public'))
+  );
 }
 
 export class CalendarPanel {
@@ -56,7 +59,11 @@ export class CalendarPanel {
     }
 
     const picked = await vscode.window.showQuickPick(
-      candidates.map((f) => ({ label: f.name, description: f.uri.fsPath, folder: f })),
+      candidates.map((f) => ({
+        label: f.name,
+        description: f.uri.fsPath,
+        folder: f,
+      })),
       { placeHolder: 'カレンダーを開くワークスペースフォルダを選択' },
     );
     if (picked) {
@@ -78,7 +85,10 @@ export class CalendarPanel {
     }
   }
 
-  public static createOrShow(context: vscode.ExtensionContext, folder: vscode.WorkspaceFolder) {
+  public static createOrShow(
+    context: vscode.ExtensionContext,
+    folder: vscode.WorkspaceFolder,
+  ) {
     const workspaceRoot = folder.uri.fsPath;
     const existing = CalendarPanel.panels.get(CalendarPanel.key(workspaceRoot));
     if (existing) {
@@ -87,15 +97,29 @@ export class CalendarPanel {
     }
 
     const multi = (vscode.workspace.workspaceFolders?.length ?? 0) > 1;
-    const title = multi ? `Qiita 記事カレンダー (${folder.name})` : 'Qiita 記事カレンダー';
+    const title = multi
+      ? `Qiita 記事カレンダー (${folder.name})`
+      : 'Qiita 記事カレンダー';
 
-    const panel = vscode.window.createWebviewPanel('articleCalendar', title, vscode.ViewColumn.One, {
-      enableScripts: true,
-      localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'media')],
-      retainContextWhenHidden: true,
-    });
+    const panel = vscode.window.createWebviewPanel(
+      'articleCalendar',
+      title,
+      vscode.ViewColumn.One,
+      {
+        enableScripts: true,
+        localResourceRoots: [
+          vscode.Uri.joinPath(context.extensionUri, 'media'),
+        ],
+        retainContextWhenHidden: true,
+      },
+    );
 
-    const instance = new CalendarPanel(panel, context.extensionUri, folder, title);
+    const instance = new CalendarPanel(
+      panel,
+      context.extensionUri,
+      folder,
+      title,
+    );
     CalendarPanel.panels.set(CalendarPanel.key(workspaceRoot), instance);
   }
 
@@ -113,13 +137,19 @@ export class CalendarPanel {
 
     this._articleParser = new ArticleParser(this._publicDir);
     this._holidayService = new HolidayService(() =>
-      vscode.workspace.getConfiguration('articleCalendar', folder.uri).get<string>('holidayCalendarId', DEFAULT_HOLIDAY_CALENDAR_ID),
+      vscode.workspace
+        .getConfiguration('articleCalendar', folder.uri)
+        .get<string>('holidayCalendarId', DEFAULT_HOLIDAY_CALENDAR_ID),
     );
     this._gitService = new GitService(workspaceRoot);
 
     this._panel.webview.html = this._getHtmlForWebview(title);
 
-    this._panel.webview.onDidReceiveMessage((message) => this._handleMessage(message), null, this._disposables);
+    this._panel.webview.onDidReceiveMessage(
+      (message) => this._handleMessage(message),
+      null,
+      this._disposables,
+    );
 
     // public/ 配下のファイル変更を監視して自動リロード通知
     // （このパネルのワークスペースフォルダに限定する）
@@ -142,7 +172,9 @@ export class CalendarPanel {
       },
     });
 
-    const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(folder, 'public/**/*.md'));
+    const watcher = vscode.workspace.createFileSystemWatcher(
+      new vscode.RelativePattern(folder, 'public/**/*.md'),
+    );
     watcher.onDidChange(() => notify(500));
     watcher.onDidCreate(() => notify(500));
     watcher.onDidDelete(() => notify(500));
@@ -154,7 +186,10 @@ export class CalendarPanel {
         return;
       }
       const gitHeadWatcher = vscode.workspace.createFileSystemWatcher(
-        new vscode.RelativePattern(vscode.Uri.file(path.dirname(headPath)), 'HEAD'),
+        new vscode.RelativePattern(
+          vscode.Uri.file(path.dirname(headPath)),
+          'HEAD',
+        ),
       );
       gitHeadWatcher.onDidChange(() => notify(300));
       gitHeadWatcher.onDidCreate(() => notify(300));
@@ -164,10 +199,22 @@ export class CalendarPanel {
     // 設定変更（祝日の取得元・表示テーマ）を反映する
     this._disposables.push(
       vscode.workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration('articleCalendar.theme', folder.uri) && !this._disposed) {
-          this._panel.webview.postMessage({ type: 'themeChanged', theme: this._getTheme() });
+        if (
+          e.affectsConfiguration('articleCalendar.theme', folder.uri) &&
+          !this._disposed
+        ) {
+          this._panel.webview.postMessage({
+            type: 'themeChanged',
+            theme: this._getTheme(),
+          });
         }
-        if (e.affectsConfiguration('articleCalendar.holidayCalendarId', folder.uri) && !this._disposed) {
+        if (
+          e.affectsConfiguration(
+            'articleCalendar.holidayCalendarId',
+            folder.uri,
+          ) &&
+          !this._disposed
+        ) {
           this._panel.webview.postMessage({ type: 'holidaysChanged' });
         }
       }),
@@ -261,7 +308,9 @@ export class CalendarPanel {
           break;
 
         case 'openFile': {
-          const filePath = this._findArticle(message.slug)?.filePath ?? this._resolveWorkspacePath(message.path);
+          const filePath =
+            this._findArticle(message.slug)?.filePath ??
+            this._resolveWorkspacePath(message.path);
           if (!filePath) {
             data = { success: false, error: '記事ファイルが見つかりません' };
             break;
@@ -291,7 +340,11 @@ export class CalendarPanel {
       }
     } catch (err: any) {
       if (!this._disposed) {
-        this._panel.webview.postMessage({ type: 'response', id, error: err.message });
+        this._panel.webview.postMessage({
+          type: 'response',
+          id,
+          error: err.message,
+        });
       }
     }
   }
@@ -307,7 +360,10 @@ export class CalendarPanel {
     const validModes = ['public', 'private', 'scheduled'];
     const mode = (req.mode || 'public').toLowerCase();
     if (!validModes.includes(mode)) {
-      return { success: false, error: '記事種別が不正です（public / private / scheduled）' };
+      return {
+        success: false,
+        error: '記事種別が不正です（public / private / scheduled）',
+      };
     }
 
     // 日付の決定
@@ -326,7 +382,10 @@ export class CalendarPanel {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       if (articleDate <= today) {
-        return { success: false, error: '予約投稿日は明日以降を指定してください' };
+        return {
+          success: false,
+          error: '予約投稿日は明日以降を指定してください',
+        };
       }
     } else {
       articleDate = new Date();
@@ -345,7 +404,10 @@ export class CalendarPanel {
     const filePath = path.join(subDir, `${slug}.md`);
 
     if (fs.existsSync(filePath) || this._findArticle(slug)) {
-      return { success: false, error: `同名の記事ファイルが既に存在します: ${slug}.md` };
+      return {
+        success: false,
+        error: `同名の記事ファイルが既に存在します: ${slug}.md`,
+      };
     }
 
     // ブランチ操作
@@ -359,20 +421,29 @@ export class CalendarPanel {
       branch = `add-${this._sanitizeBranchName(slug)}`;
       const r2 = await this._gitService.createBranch(branch);
       if (!r2.success) {
-        return { success: false, error: `ブランチの作成に失敗しました: ${r2.output}` };
+        return {
+          success: false,
+          error: `ブランチの作成に失敗しました: ${r2.output}`,
+        };
       }
     }
 
     // Front Matter 生成
     const isPrivate = mode === 'private' ? 'true' : 'false';
-    const scheduledLine = mode === 'scheduled' ? `\nscheduled_publish: "${req.date}"` : '';
+    const scheduledLine =
+      mode === 'scheduled' ? `\nscheduled_publish: "${req.date}"` : '';
 
     const content = `---\ntitle: ''\ntags:\n  - ''\nprivate: ${isPrivate}\nupdated_at: ''\nid: null\norganization_url_name: null\nslide: false\nignorePublish: true${scheduledLine}\n---\n\n`;
 
     fs.mkdirSync(subDir, { recursive: true });
     fs.writeFileSync(filePath, content, 'utf-8');
 
-    const modeLabel = mode === 'private' ? '限定共有' : mode === 'scheduled' ? '予約投稿' : '公開';
+    const modeLabel =
+      mode === 'private'
+        ? '限定共有'
+        : mode === 'scheduled'
+          ? '予約投稿'
+          : '公開';
     const dateStr = `${y}-${m}-${d}`;
 
     return {
@@ -389,7 +460,10 @@ export class CalendarPanel {
   // === 記事リスケジュール ===
 
   private _rescheduleArticle(slug: string, newDate: string): any {
-    const found = this._requireEditableArticle(slug, '投稿済みの記事は移動できません');
+    const found = this._requireEditableArticle(
+      slug,
+      '投稿済みの記事は移動できません',
+    );
     if ('error' in found) {
       return found.error;
     }
@@ -418,12 +492,19 @@ export class CalendarPanel {
     const slugDateMatch = slug.match(/^(\d{8})-(.+)$/);
     const titlePart = slugDateMatch ? slugDateMatch[2] : slug;
     const newSlug = `${newDate.replace(/-/g, '')}-${titlePart}`;
-    const newDir = path.join(this._publicDir, newDate.substring(0, 4), newDate.substring(5, 7));
+    const newDir = path.join(
+      this._publicDir,
+      newDate.substring(0, 4),
+      newDate.substring(5, 7),
+    );
     const newPath = path.join(newDir, `${newSlug}.md`);
     const samePath = this._samePath(oldPath, newPath);
 
     if (!samePath && (fs.existsSync(newPath) || this._findArticle(newSlug))) {
-      return { success: false, error: `移動先に同名のファイルが既に存在します: ${newSlug}.md` };
+      return {
+        success: false,
+        error: `移動先に同名のファイルが既に存在します: ${newSlug}.md`,
+      };
     }
 
     // Front Matter の scheduled_publish を更新（存在しない場合は追加）
@@ -455,7 +536,10 @@ export class CalendarPanel {
   // === 記事の日付除去 ===
 
   private _removeArticleDate(slug: string): any {
-    const found = this._requireEditableArticle(slug, '投稿済みの記事は移動できません');
+    const found = this._requireEditableArticle(
+      slug,
+      '投稿済みの記事は移動できません',
+    );
     if ('error' in found) {
       return found.error;
     }
@@ -463,7 +547,10 @@ export class CalendarPanel {
 
     const match = slug.match(/^(\d{8})-(.+)$/);
     if (!match) {
-      return { success: false, error: 'この記事には日付プレフィックスがありません' };
+      return {
+        success: false,
+        error: 'この記事には日付プレフィックスがありません',
+      };
     }
 
     // 既に日付未定の場合は何もしない
@@ -475,10 +562,16 @@ export class CalendarPanel {
     const newPath = path.join(this._publicDir, `${newSlug}.md`);
 
     if (fs.existsSync(newPath) || this._findArticle(newSlug)) {
-      return { success: false, error: `同名のファイルが既に存在します: ${newSlug}.md` };
+      return {
+        success: false,
+        error: `同名のファイルが既に存在します: ${newSlug}.md`,
+      };
     }
 
-    const content = removeField(fs.readFileSync(oldPath, 'utf-8'), 'scheduled_publish');
+    const content = removeField(
+      fs.readFileSync(oldPath, 'utf-8'),
+      'scheduled_publish',
+    );
 
     fs.writeFileSync(newPath, content, 'utf-8');
     fs.unlinkSync(oldPath);
@@ -489,34 +582,56 @@ export class CalendarPanel {
   // === フィールドトグル ===
 
   private _togglePrivate(slug: string): any {
-    const found = this._requireEditableArticle(slug, '投稿済みの記事の公開設定は Qiita Web 上で変更してください');
+    const found = this._requireEditableArticle(
+      slug,
+      '投稿済みの記事の公開設定は Qiita Web 上で変更してください',
+    );
     if ('error' in found) {
       return found.error;
     }
     const { article } = found;
 
     const newValue = !article.isPrivate;
-    const content = setField(fs.readFileSync(article.filePath, 'utf-8'), 'private', String(newValue));
+    const content = setField(
+      fs.readFileSync(article.filePath, 'utf-8'),
+      'private',
+      String(newValue),
+    );
     fs.writeFileSync(article.filePath, content, 'utf-8');
 
-    return { success: true, slug, newValue, label: newValue ? '限定共有' : '公開' };
+    return {
+      success: true,
+      slug,
+      newValue,
+      label: newValue ? '限定共有' : '公開',
+    };
   }
 
   private _toggleIgnorePublish(slug: string): any {
-    const found = this._requireEditableArticle(slug, '投稿済みの記事は変更できません');
+    const found = this._requireEditableArticle(
+      slug,
+      '投稿済みの記事は変更できません',
+    );
     if ('error' in found) {
       return found.error;
     }
     const { article } = found;
 
     if (article.status === 'Scheduled' || article.status === 'ScheduledPast') {
-      return { success: false, error: '予約投稿記事の投稿準備状態は変更できません' };
+      return {
+        success: false,
+        error: '予約投稿記事の投稿準備状態は変更できません',
+      };
     }
 
     // Draft → Ready: ignorePublish true → false
     // Ready → Draft: ignorePublish false → true
     const newIgnorePublish = article.status === 'Ready';
-    const content = setField(fs.readFileSync(article.filePath, 'utf-8'), 'ignorePublish', String(newIgnorePublish));
+    const content = setField(
+      fs.readFileSync(article.filePath, 'utf-8'),
+      'ignorePublish',
+      String(newIgnorePublish),
+    );
     fs.writeFileSync(article.filePath, content, 'utf-8');
 
     const newStatus = newIgnorePublish ? 'Draft' : 'Ready';
@@ -544,11 +659,18 @@ export class CalendarPanel {
     publishedMessage: string,
   ): { article: ArticleInfo } | { error: { success: false; error: string } } {
     if (typeof slug !== 'string' || !slug.trim()) {
-      return { error: { success: false, error: 'スラッグが指定されていません' } };
+      return {
+        error: { success: false, error: 'スラッグが指定されていません' },
+      };
     }
     const article = this._findArticle(slug);
     if (!article) {
-      return { error: { success: false, error: `記事ファイルが見つかりません: ${slug}.md` } };
+      return {
+        error: {
+          success: false,
+          error: `記事ファイルが見つかりません: ${slug}.md`,
+        },
+      };
     }
     if (article.status === 'Published') {
       return { error: { success: false, error: publishedMessage } };
@@ -559,7 +681,9 @@ export class CalendarPanel {
   private _samePath(a: string, b: string): boolean {
     const ra = path.resolve(a);
     const rb = path.resolve(b);
-    return process.platform === 'win32' ? ra.toLowerCase() === rb.toLowerCase() : ra === rb;
+    return process.platform === 'win32'
+      ? ra.toLowerCase() === rb.toLowerCase()
+      : ra === rb;
   }
 
   /** ワークスペース配下に収まるパスのみ許可 */
@@ -610,7 +734,9 @@ export class CalendarPanel {
 
   /** 設定 articleCalendar.theme（auto / light / dark）。不正な値は auto */
   private _getTheme(): 'auto' | 'light' | 'dark' {
-    const v = vscode.workspace.getConfiguration('articleCalendar', vscode.Uri.file(this._workspaceRoot)).get<string>('theme', 'auto');
+    const v = vscode.workspace
+      .getConfiguration('articleCalendar', vscode.Uri.file(this._workspaceRoot))
+      .get<string>('theme', 'auto');
     return v === 'light' || v === 'dark' ? v : 'auto';
   }
 
@@ -619,13 +745,13 @@ export class CalendarPanel {
   private _getHtmlForWebview(title: string): string {
     const webview = this._panel.webview;
     const styleUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this._extensionUri, 'media', 'style.css')
+      vscode.Uri.joinPath(this._extensionUri, 'media', 'style.css'),
     );
     const codiconUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this._extensionUri, 'media', 'codicon.css')
+      vscode.Uri.joinPath(this._extensionUri, 'media', 'codicon.css'),
     );
     const scriptUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this._extensionUri, 'media', 'app.js')
+      vscode.Uri.joinPath(this._extensionUri, 'media', 'app.js'),
     );
 
     return /*html*/ `<!DOCTYPE html>

@@ -1,6 +1,6 @@
 // @ts-check
 
-"use strict";
+'use strict';
 
 /**
  * Qiita コードブロックのファイル名記法を検証するカスタムルール
@@ -13,13 +13,13 @@
  * 参照: resources/qiita-markdown - lib/qiita/markdown/filters/code_block.rb
  */
 
-const { isPublicArticle } = require("./_helpers");
+const { isPublicArticle } = require('./_helpers');
 
 /** @type {import("markdownlint").Rule} */
 module.exports = {
-  names: ["qiita-code-block", "QFM003"],
-  description: "Qiita コードブロックの lang:filename 記法が正しいこと",
-  tags: ["qiita", "code-block"],
+  names: ['qiita-code-block', 'QFM003'],
+  description: 'Qiita コードブロックの lang:filename 記法が正しいこと',
+  tags: ['qiita', 'code-block'],
   function: function rule(params, onError) {
     if (!isPublicArticle(params.name)) return;
 
@@ -37,25 +37,25 @@ module.exports = {
       if (!info) continue; // 言語指定なし（OK）
 
       // : を含む場合は lang:filename 記法
-      const colonIndex = info.indexOf(":");
+      const colonIndex = info.indexOf(':');
       if (colonIndex === -1) continue; // : がない場合はスキップ
 
       const lang = info.substring(0, colonIndex);
       const filename = info.substring(colonIndex + 1);
 
-      if (lang === "") {
+      if (lang === '') {
         onError({
           lineNumber,
           detail:
-            "コードブロックの言語名が空です。`:filename` ではなく `lang:filename` の形式にしてください",
+            'コードブロックの言語名が空です。`:filename` ではなく `lang:filename` の形式にしてください',
         });
       }
 
-      if (filename === "") {
+      if (filename === '') {
         onError({
           lineNumber,
           detail:
-            "コードブロックのファイル名が空です。`lang:` ではなく `lang:filename` の形式にしてください",
+            'コードブロックのファイル名が空です。`lang:` ではなく `lang:filename` の形式にしてください',
         });
       }
     }

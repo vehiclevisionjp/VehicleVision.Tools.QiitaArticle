@@ -1,6 +1,6 @@
 // ダークテーマ: 明色固定だった面の上書き
 
-@use "themes" as *;
+@use 'themes' as *;
 
 @include dark-root {
   .sidebar-header,

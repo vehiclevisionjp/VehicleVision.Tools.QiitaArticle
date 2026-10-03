@@ -6,6 +6,6 @@ export default defineConfig({
     alias: { vscode: path.resolve(__dirname, 'test/vscodeStub.ts') },
   },
   test: {
-    include: ['test/**/*.test.ts'],
+    include: ['test/**/*.test.ts', 'src/**/__tests__/**/*.test.ts'],
   },
 });

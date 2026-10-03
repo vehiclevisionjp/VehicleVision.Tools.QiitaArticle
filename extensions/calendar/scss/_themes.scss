@@ -4,7 +4,7 @@
 // - ライト: :root（既定）
 // - ダーク: body.qiita-dark（app.js が設定 `articleCalendar.theme` と VS Code のテーマから付与）
 
-@use "sass:map";
+@use 'sass:map';
 
 $palettes: (
   light: (

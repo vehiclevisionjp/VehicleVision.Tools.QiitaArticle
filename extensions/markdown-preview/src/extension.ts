@@ -79,7 +79,10 @@ function isQiitaDocument(currentDocument: unknown): boolean {
   let fsPath: string | undefined;
   if (typeof currentDocument === 'string') {
     fsPath = currentDocument;
-  } else if (currentDocument && typeof (currentDocument as vscode.Uri).fsPath === 'string') {
+  } else if (
+    currentDocument &&
+    typeof (currentDocument as vscode.Uri).fsPath === 'string'
+  ) {
     fsPath = (currentDocument as vscode.Uri).fsPath;
   }
   if (!fsPath) {
@@ -250,7 +253,10 @@ function inlineMathPlugin(md: MarkdownIt) {
   md.inline.ruler.before('text', 'qiita_math_inline', (state, silent) => {
     const src = state.src;
     const pos = state.pos;
-    if (src.charCodeAt(pos) !== 0x24 /* $ */ || src.charCodeAt(pos + 1) !== 0x60 /* ` */) {
+    if (
+      src.charCodeAt(pos) !== 0x24 /* $ */ ||
+      src.charCodeAt(pos + 1) !== 0x60 /* ` */
+    ) {
       return false;
     }
     if (!isQiita(state.env)) return false;
@@ -284,7 +290,13 @@ function inlineMathPlugin(md: MarkdownIt) {
 function codeFilenamePlugin(md: MarkdownIt) {
   const defaultFence = md.renderer.rules.fence;
 
-  const renderDefault: NonNullable<typeof defaultFence> = (tokens, idx, options, env, self) => {
+  const renderDefault: NonNullable<typeof defaultFence> = (
+    tokens,
+    idx,
+    options,
+    env,
+    self,
+  ) => {
     if (defaultFence) {
       return defaultFence(tokens, idx, options, env, self);
     }
@@ -315,7 +327,11 @@ function codeFilenamePlugin(md: MarkdownIt) {
       const lines = token.content.replace(/\n$/, '').split('\n');
       const body = lines
         .map((line) => {
-          const cls = line.startsWith('+') ? 'add' : line.startsWith('-') ? 'del' : 'ctx';
+          const cls = line.startsWith('+')
+            ? 'add'
+            : line.startsWith('-')
+              ? 'del'
+              : 'ctx';
           return `<span class="qiita-diff-line qiita-diff-${cls}">${escapeHtml(line) || ' '}</span>`;
         })
         .join('\n');
@@ -376,7 +392,8 @@ function inlineColorPlugin(md: MarkdownIt) {
       // 末尾の </code> の前にカラースパンを挿入
       const closeIdx = rendered.lastIndexOf('</code>');
       if (closeIdx >= 0) {
-        rendered = rendered.slice(0, closeIdx) + colorSpan + rendered.slice(closeIdx);
+        rendered =
+          rendered.slice(0, closeIdx) + colorSpan + rendered.slice(closeIdx);
       }
     }
 
@@ -399,55 +416,68 @@ interface FootnoteEnv {
 
 function footnotePlugin(md: MarkdownIt) {
   // --- ブロックルール: 脚注定義を収集（表示はドキュメント末尾にまとめる） ---
-  md.block.ruler.before('reference', 'qiita_footnote_def', (state, startLine, endLine, silent) => {
-    if (!isQiita(state.env)) return false;
-    if (state.sCount[startLine] - state.blkIndent >= 4) return false;
+  md.block.ruler.before(
+    'reference',
+    'qiita_footnote_def',
+    (state, startLine, endLine, silent) => {
+      if (!isQiita(state.env)) return false;
+      if (state.sCount[startLine] - state.blkIndent >= 4) return false;
 
-    const pos = state.bMarks[startLine] + state.tShift[startLine];
-    const max = state.eMarks[startLine];
-    const lineText = state.src.slice(pos, max);
+      const pos = state.bMarks[startLine] + state.tShift[startLine];
+      const max = state.eMarks[startLine];
+      const lineText = state.src.slice(pos, max);
 
-    // [^label]: で始まる行を検出
-    const match = lineText.match(/^\[\^([^\]\s]+)\]:\s*(.*)/);
-    if (!match) return false;
-    if (silent) return true;
+      // [^label]: で始まる行を検出
+      const match = lineText.match(/^\[\^([^\]\s]+)\]:\s*(.*)/);
+      if (!match) return false;
+      if (silent) return true;
 
-    const label = match[1];
-    let content = match[2];
-    let nextLine = startLine + 1;
+      const label = match[1];
+      let content = match[2];
+      let nextLine = startLine + 1;
 
-    const isBlank = (line: number) => state.src.slice(state.bMarks[line] + state.tShift[line], state.eMarks[line]).length === 0;
+      const isBlank = (line: number) =>
+        state.src.slice(
+          state.bMarks[line] + state.tShift[line],
+          state.eMarks[line],
+        ).length === 0;
 
-    // 複数行の脚注定義を収集（インデントされた継続行、または空行を挟んだインデント行）
-    while (nextLine < endLine) {
-      if (isBlank(nextLine)) {
-        // 空行: 次の非空行がインデントされていれば脚注に含める
-        let peek = nextLine + 1;
-        while (peek < endLine && isBlank(peek)) {
-          peek++;
+      // 複数行の脚注定義を収集（インデントされた継続行、または空行を挟んだインデント行）
+      while (nextLine < endLine) {
+        if (isBlank(nextLine)) {
+          // 空行: 次の非空行がインデントされていれば脚注に含める
+          let peek = nextLine + 1;
+          while (peek < endLine && isBlank(peek)) {
+            peek++;
+          }
+          if (peek < endLine && state.sCount[peek] - state.blkIndent >= 2) {
+            content += '\n';
+            nextLine++;
+            continue;
+          }
+          break;
         }
-        if (peek < endLine && state.sCount[peek] - state.blkIndent >= 2) {
-          content += '\n';
-          nextLine++;
-          continue;
-        }
-        break;
+
+        if (state.sCount[nextLine] - state.blkIndent < 2) break;
+        content +=
+          '\n' +
+          state.src.slice(
+            state.bMarks[nextLine] + state.tShift[nextLine],
+            state.eMarks[nextLine],
+          );
+        nextLine++;
       }
 
-      if (state.sCount[nextLine] - state.blkIndent < 2) break;
-      content += '\n' + state.src.slice(state.bMarks[nextLine] + state.tShift[nextLine], state.eMarks[nextLine]);
-      nextLine++;
-    }
+      const env = state.env as Partial<FootnoteEnv>;
+      if (!env.footnotes) env.footnotes = {};
+      if (!(label in env.footnotes)) {
+        env.footnotes[label] = content.trim();
+      }
 
-    const env = state.env as Partial<FootnoteEnv>;
-    if (!env.footnotes) env.footnotes = {};
-    if (!(label in env.footnotes)) {
-      env.footnotes[label] = content.trim();
-    }
-
-    state.line = nextLine;
-    return true;
-  });
+      state.line = nextLine;
+      return true;
+    },
+  );
 
   // --- インラインルール: [^label] を脚注参照に変換 ---
   md.inline.ruler.after('image', 'qiita_footnote_ref', (state, silent) => {
@@ -480,7 +510,8 @@ function footnotePlugin(md: MarkdownIt) {
         env.footnoteOrder.push(label);
         order = env.footnoteOrder.length - 1;
       }
-      const refIndex = (env.footnoteRefCount[label] = (env.footnoteRefCount[label] || 0) + 1);
+      const refIndex = (env.footnoteRefCount[label] =
+        (env.footnoteRefCount[label] || 0) + 1);
 
       const token = state.push('footnote_ref', '', 0);
       token.meta = { label, num: order + 1, refIndex };
@@ -504,14 +535,19 @@ function footnotePlugin(md: MarkdownIt) {
     order.forEach((label, i) => {
       const num = i + 1;
       // 脚注本文の中の脚注参照は再帰させない（footnotes を空にした別 env で描画）
-      const renderedContent = md.renderInline(footnotes[label] || label, { qiitaEnabled: true, footnotes: {} });
+      const renderedContent = md.renderInline(footnotes[label] || label, {
+        qiitaEnabled: true,
+        footnotes: {},
+      });
       const count = env.footnoteRefCount?.[label] ?? 1;
       let backrefs = '';
       for (let r = 1; r <= count; r++) {
         const refId = r === 1 ? `fnref-${num}` : `fnref-${num}-${r}`;
         backrefs += `<a href="#${refId}" class="qiita-footnote-backref" title="戻る">↩</a>`;
       }
-      parts.push(`<li id="fn-${num}" class="qiita-footnote-item"><p>${renderedContent} ${backrefs}</p></li>\n`);
+      parts.push(
+        `<li id="fn-${num}" class="qiita-footnote-item"><p>${renderedContent} ${backrefs}</p></li>\n`,
+      );
     });
 
     parts.push('</ol>\n</section>\n');
@@ -561,7 +597,10 @@ function taskListPlugin(md: MarkdownIt) {
       tokens[i - 2].attrJoin('class', 'qiita-task-list-item');
       // 直近の親リストにもクラスを付与
       for (let j = i - 3; j >= 0; j--) {
-        if (tokens[j].type === 'bullet_list_open' || tokens[j].type === 'ordered_list_open') {
+        if (
+          tokens[j].type === 'bullet_list_open' ||
+          tokens[j].type === 'ordered_list_open'
+        ) {
           if (!(tokens[j].attrGet('class') ?? '').includes('qiita-task-list')) {
             tokens[j].attrJoin('class', 'qiita-task-list');
           }
@@ -577,33 +616,167 @@ function taskListPlugin(md: MarkdownIt) {
 // =====================================================================
 
 const EMOJI_MAP: Record<string, string> = {
-  smile: '😄', smiley: '😃', grinning: '😀', grin: '😁', laughing: '😆', joy: '😂', rofl: '🤣',
-  blush: '😊', wink: '😉', heart_eyes: '😍', sunglasses: '😎', thinking: '🤔', neutral_face: '😐',
-  sweat_smile: '😅', sob: '😭', cry: '😢', scream: '😱', angry: '😠', rage: '😡', sleeping: '😴',
-  relaxed: '☺️', innocent: '😇', slightly_smiling_face: '🙂', upside_down_face: '🙃', confused: '😕',
-  disappointed: '😞', worried: '😟', flushed: '😳', sweat: '😓', tired_face: '😫', yum: '😋',
-  thumbsup: '👍', '+1': '👍', thumbsdown: '👎', '-1': '👎', ok_hand: '👌', clap: '👏', pray: '🙏',
-  muscle: '💪', wave: '👋', raised_hands: '🙌', point_up: '☝️', point_down: '👇', point_left: '👈',
-  point_right: '👉', eyes: '👀', fist: '✊', v: '✌️', handshake: '🤝',
-  heart: '❤️', blue_heart: '💙', green_heart: '💚', yellow_heart: '💛', purple_heart: '💜',
-  broken_heart: '💔', sparkles: '✨', star: '⭐', star2: '🌟', fire: '🔥', boom: '💥', zap: '⚡',
-  tada: '🎉', confetti_ball: '🎊', gift: '🎁', trophy: '🏆', medal_sports: '🏅', crown: '👑',
-  rocket: '🚀', airplane: '✈️', car: '🚗', bulb: '💡', memo: '📝', pencil: '✏️', book: '📖',
-  books: '📚', bookmark: '🔖', link: '🔗', paperclip: '📎', pushpin: '📌', calendar: '📆',
-  date: '📅', clock: '🕐', hourglass: '⌛', bell: '🔔', mega: '📣', loudspeaker: '📢',
-  mag: '🔍', lock: '🔒', unlock: '🔓', key: '🔑', wrench: '🔧', hammer: '🔨', gear: '⚙️',
-  computer: '💻', desktop_computer: '🖥️', keyboard: '⌨️', iphone: '📱', email: '📧', envelope: '✉️',
-  package: '📦', chart_with_upwards_trend: '📈', chart_with_downwards_trend: '📉', bar_chart: '📊',
-  warning: '⚠️', no_entry: '⛔', no_entry_sign: '🚫', x: '❌', o: '⭕', white_check_mark: '✅',
-  heavy_check_mark: '✔️', ballot_box_with_check: '☑️', question: '❓', exclamation: '❗',
-  information_source: 'ℹ️', bangbang: '‼️', '100': '💯', recycle: '♻️', construction: '🚧',
-  bug: '🐛', ant: '🐜', bee: '🐝', beetle: '🐞', snake: '🐍', whale: '🐳', dog: '🐶', cat: '🐱',
-  penguin: '🐧', octopus: '🐙', tiger: '🐯', bird: '🐦', hatching_chick: '🐣', turtle: '🐢',
-  sunny: '☀️', cloud: '☁️', umbrella: '☔', snowflake: '❄️', rainbow: '🌈', earth_asia: '🌏',
-  coffee: '☕', beer: '🍺', pizza: '🍕', apple: '🍎', cake: '🍰', sushi: '🍣', ramen: '🍜',
-  arrow_right: '➡️', arrow_left: '⬅️', arrow_up: '⬆️', arrow_down: '⬇️', arrows_counterclockwise: '🔄',
-  zzz: '💤', speech_balloon: '💬', thought_balloon: '💭', see_no_evil: '🙈', hear_no_evil: '🙉',
-  speak_no_evil: '🙊', skull: '💀', ghost: '👻', robot: '🤖', alien: '👽', poop: '💩',
+  smile: '😄',
+  smiley: '😃',
+  grinning: '😀',
+  grin: '😁',
+  laughing: '😆',
+  joy: '😂',
+  rofl: '🤣',
+  blush: '😊',
+  wink: '😉',
+  heart_eyes: '😍',
+  sunglasses: '😎',
+  thinking: '🤔',
+  neutral_face: '😐',
+  sweat_smile: '😅',
+  sob: '😭',
+  cry: '😢',
+  scream: '😱',
+  angry: '😠',
+  rage: '😡',
+  sleeping: '😴',
+  relaxed: '☺️',
+  innocent: '😇',
+  slightly_smiling_face: '🙂',
+  upside_down_face: '🙃',
+  confused: '😕',
+  disappointed: '😞',
+  worried: '😟',
+  flushed: '😳',
+  sweat: '😓',
+  tired_face: '😫',
+  yum: '😋',
+  thumbsup: '👍',
+  '+1': '👍',
+  thumbsdown: '👎',
+  '-1': '👎',
+  ok_hand: '👌',
+  clap: '👏',
+  pray: '🙏',
+  muscle: '💪',
+  wave: '👋',
+  raised_hands: '🙌',
+  point_up: '☝️',
+  point_down: '👇',
+  point_left: '👈',
+  point_right: '👉',
+  eyes: '👀',
+  fist: '✊',
+  v: '✌️',
+  handshake: '🤝',
+  heart: '❤️',
+  blue_heart: '💙',
+  green_heart: '💚',
+  yellow_heart: '💛',
+  purple_heart: '💜',
+  broken_heart: '💔',
+  sparkles: '✨',
+  star: '⭐',
+  star2: '🌟',
+  fire: '🔥',
+  boom: '💥',
+  zap: '⚡',
+  tada: '🎉',
+  confetti_ball: '🎊',
+  gift: '🎁',
+  trophy: '🏆',
+  medal_sports: '🏅',
+  crown: '👑',
+  rocket: '🚀',
+  airplane: '✈️',
+  car: '🚗',
+  bulb: '💡',
+  memo: '📝',
+  pencil: '✏️',
+  book: '📖',
+  books: '📚',
+  bookmark: '🔖',
+  link: '🔗',
+  paperclip: '📎',
+  pushpin: '📌',
+  calendar: '📆',
+  date: '📅',
+  clock: '🕐',
+  hourglass: '⌛',
+  bell: '🔔',
+  mega: '📣',
+  loudspeaker: '📢',
+  mag: '🔍',
+  lock: '🔒',
+  unlock: '🔓',
+  key: '🔑',
+  wrench: '🔧',
+  hammer: '🔨',
+  gear: '⚙️',
+  computer: '💻',
+  desktop_computer: '🖥️',
+  keyboard: '⌨️',
+  iphone: '📱',
+  email: '📧',
+  envelope: '✉️',
+  package: '📦',
+  chart_with_upwards_trend: '📈',
+  chart_with_downwards_trend: '📉',
+  bar_chart: '📊',
+  warning: '⚠️',
+  no_entry: '⛔',
+  no_entry_sign: '🚫',
+  x: '❌',
+  o: '⭕',
+  white_check_mark: '✅',
+  heavy_check_mark: '✔️',
+  ballot_box_with_check: '☑️',
+  question: '❓',
+  exclamation: '❗',
+  information_source: 'ℹ️',
+  bangbang: '‼️',
+  '100': '💯',
+  recycle: '♻️',
+  construction: '🚧',
+  bug: '🐛',
+  ant: '🐜',
+  bee: '🐝',
+  beetle: '🐞',
+  snake: '🐍',
+  whale: '🐳',
+  dog: '🐶',
+  cat: '🐱',
+  penguin: '🐧',
+  octopus: '🐙',
+  tiger: '🐯',
+  bird: '🐦',
+  hatching_chick: '🐣',
+  turtle: '🐢',
+  sunny: '☀️',
+  cloud: '☁️',
+  umbrella: '☔',
+  snowflake: '❄️',
+  rainbow: '🌈',
+  earth_asia: '🌏',
+  coffee: '☕',
+  beer: '🍺',
+  pizza: '🍕',
+  apple: '🍎',
+  cake: '🍰',
+  sushi: '🍣',
+  ramen: '🍜',
+  arrow_right: '➡️',
+  arrow_left: '⬅️',
+  arrow_up: '⬆️',
+  arrow_down: '⬇️',
+  arrows_counterclockwise: '🔄',
+  zzz: '💤',
+  speech_balloon: '💬',
+  thought_balloon: '💭',
+  see_no_evil: '🙈',
+  hear_no_evil: '🙉',
+  speak_no_evil: '🙊',
+  skull: '💀',
+  ghost: '👻',
+  robot: '🤖',
+  alien: '👽',
+  poop: '💩',
 };
 
 function emojiPlugin(md: MarkdownIt) {
@@ -614,7 +787,10 @@ function emojiPlugin(md: MarkdownIt) {
       for (const child of blockToken.children) {
         // text トークンのみ置換（コードスパン・HTML は別トークンなので対象外）
         if (child.type !== 'text' || !child.content.includes(':')) continue;
-        child.content = child.content.replace(/:([a-z0-9_+-]+):/g, (whole, name: string) => EMOJI_MAP[name] ?? whole);
+        child.content = child.content.replace(
+          /:([a-z0-9_+-]+):/g,
+          (whole, name: string) => EMOJI_MAP[name] ?? whole,
+        );
       }
     }
   });

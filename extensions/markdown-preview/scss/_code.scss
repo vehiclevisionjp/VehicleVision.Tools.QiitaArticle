@@ -1,4 +1,4 @@
-@use "themes" as *;
+@use 'themes' as *;
 
 // コードブロック lang:filename / diff_lang
 // Qiita と同様、ファイル名をコードブロック上部のタブとして表示する。
@@ -14,7 +14,12 @@
   padding: 4px 12px;
   font-size: 0.82em;
   font-weight: 600;
-  font-family: var(--vscode-editor-font-family, "Consolas", "Courier New", monospace);
+  font-family: var(
+    --vscode-editor-font-family,
+    'Consolas',
+    'Courier New',
+    monospace
+  );
   background-color: #e4e4e4;
   color: #333;
   border-bottom: 1px solid rgba(128, 128, 128, 0.3);
@@ -75,7 +80,7 @@ pre.qiita-diff {
 .qiita-math-fallback {
   display: inline-block;
   padding: 12px 24px;
-  font-family: "KaTeX_Main", "Times New Roman", serif;
+  font-family: 'KaTeX_Main', 'Times New Roman', serif;
   font-size: 1.1em;
   text-align: center;
   background-color: rgba(128, 128, 128, 0.05);

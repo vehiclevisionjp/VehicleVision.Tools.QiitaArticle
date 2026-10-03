@@ -16,7 +16,7 @@
     // テーブルのスタイルチェックを無効化（日本語混在で列幅の一致が困難なため）
     "MD060": false,
     // 裸のURLを許可（Qiitaのリンクカード機能を使用するため）
-    "MD034": false
+    "MD034": false,
   },
 
   // カスタムルール（Qiita 固有記法の検証）
@@ -29,6 +29,6 @@
     ".markdownlint-rules/qiita-math-block.js",
     ".markdownlint-rules/qiita-details-summary.js",
     ".markdownlint-rules/qiita-embed.js",
-    ".markdownlint-rules/qiita-inline-math.js"
-  ]
+    ".markdownlint-rules/qiita-inline-math.js",
+  ],
 }

@@ -17,7 +17,9 @@ function unfold(text: string): string[] {
 }
 
 function unescapeText(s: string): string {
-  return s.replace(/\\([nN,;\\])/g, (_, c: string) => (c === 'n' || c === 'N' ? '\n' : c));
+  return s.replace(/\\([nN,;\\])/g, (_, c: string) =>
+    c === 'n' || c === 'N' ? '\n' : c,
+  );
 }
 
 function parseDateValue(v: string): Date | null {
@@ -52,7 +54,8 @@ export function parseIcsEvents(ics: string): IcsEvent[] {
     }
     if (line === 'END:VEVENT') {
       if (inEvent && start) {
-        const last = end && end > start ? new Date(end.getTime() - 86_400_000) : start;
+        const last =
+          end && end > start ? new Date(end.getTime() - 86_400_000) : start;
         for (let t = start.getTime(); t <= last.getTime(); t += 86_400_000) {
           events.push({ date: fmt(new Date(t)), name: summary, description });
         }

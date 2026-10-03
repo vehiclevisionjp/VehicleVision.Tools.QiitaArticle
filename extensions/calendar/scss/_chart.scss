@@ -73,6 +73,11 @@
 // レスポンシブ
 
 @media (max-width: 768px) {
-  .day-cell { min-height: 60px; }
-  .article-item { font-size: 0.65rem; padding: 2px 4px; }
+  .day-cell {
+    min-height: 60px;
+  }
+  .article-item {
+    font-size: 0.65rem;
+    padding: 2px 4px;
+  }
 }

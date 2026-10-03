@@ -59,8 +59,13 @@
 }
 
 @keyframes branch-pulse {
-  0%, 100% { box-shadow: 0 0 0 1.5px #f5a623; }
-  50% { box-shadow: 0 0 4px 1.5px #f5a623; }
+  0%,
+  100% {
+    box-shadow: 0 0 0 1.5px #f5a623;
+  }
+  50% {
+    box-shadow: 0 0 4px 1.5px #f5a623;
+  }
 }
 
 .legend-dot.branch-file {
@@ -145,7 +150,9 @@
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.2s, opacity 0.2s;
+  transition:
+    background 0.2s,
+    opacity 0.2s;
 
   &:hover {
     background: #0d47a1;
@@ -167,7 +174,9 @@
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.2s, opacity 0.2s;
+  transition:
+    background 0.2s,
+    opacity 0.2s;
 
   &:hover {
     background: #004d40;
@@ -189,7 +198,9 @@
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.2s, opacity 0.2s;
+  transition:
+    background 0.2s,
+    opacity 0.2s;
 
   &:hover {
     background: #2e7d32;

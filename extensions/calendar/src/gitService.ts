@@ -19,7 +19,10 @@ export class GitService {
    * git コマンド実行ヘルパー。シェルを経由せず引数配列で実行するため、
    * ブランチ名やコミットメッセージに特殊文字が含まれていても安全。
    */
-  runGit(args: string[], timeout: number = DEFAULT_TIMEOUT): Promise<GitResult> {
+  runGit(
+    args: string[],
+    timeout: number = DEFAULT_TIMEOUT,
+  ): Promise<GitResult> {
     return new Promise((resolve) => {
       execFile(
         'git',
@@ -62,7 +65,9 @@ export class GitService {
   /** HEAD ファイルの絶対パス（worktree / submodule 対応） */
   async getHeadPath(): Promise<string | null> {
     const r = await this.runGit(['rev-parse', '--absolute-git-dir']);
-    return r.success && r.output ? r.output.replace(/\\/g, '/') + '/HEAD' : null;
+    return r.success && r.output
+      ? r.output.replace(/\\/g, '/') + '/HEAD'
+      : null;
   }
 
   /** デフォルトブランチ名（origin/HEAD → main → master の順に判定） */
@@ -72,14 +77,24 @@ export class GitService {
     }
 
     let name = '';
-    const originHead = await this.runGit(['symbolic-ref', '--quiet', '--short', 'refs/remotes/origin/HEAD']);
+    const originHead = await this.runGit([
+      'symbolic-ref',
+      '--quiet',
+      '--short',
+      'refs/remotes/origin/HEAD',
+    ]);
     if (originHead.success && originHead.output) {
       name = originHead.output.replace(/^origin\//, '');
     }
 
     if (!name) {
       for (const candidate of ['main', 'master']) {
-        const r = await this.runGit(['show-ref', '--verify', '--quiet', `refs/heads/${candidate}`]);
+        const r = await this.runGit([
+          'show-ref',
+          '--verify',
+          '--quiet',
+          `refs/heads/${candidate}`,
+        ]);
         if (r.success) {
           name = candidate;
           break;
@@ -114,7 +129,13 @@ export class GitService {
     hasChanges: boolean;
     files: Array<{ status: string; path: string }>;
   }> {
-    const result = await this.runGit(['status', '--porcelain', '--untracked-files=all', '--', 'public/']);
+    const result = await this.runGit([
+      'status',
+      '--porcelain',
+      '--untracked-files=all',
+      '--',
+      'public/',
+    ]);
     if (!result.success) {
       return { success: false, hasChanges: false, files: [] };
     }
@@ -149,20 +170,40 @@ export class GitService {
       return { success: false, error: 'コミットメッセージは必須です' };
     }
 
-    const statusResult = await this.runGit(['status', '--porcelain', '--', 'public/']);
+    const statusResult = await this.runGit([
+      'status',
+      '--porcelain',
+      '--',
+      'public/',
+    ]);
     if (statusResult.success && !statusResult.output.trim()) {
-      return { success: false, error: 'コミットする変更がありません（public/ 配下）' };
+      return {
+        success: false,
+        error: 'コミットする変更がありません（public/ 配下）',
+      };
     }
 
     const addResult = await this.runGit(['add', '-A', '--', 'public/']);
     if (!addResult.success) {
-      return { success: false, error: `ステージングに失敗しました: ${addResult.output}` };
+      return {
+        success: false,
+        error: `ステージングに失敗しました: ${addResult.output}`,
+      };
     }
 
     // public/ 以外のステージ済み変更を巻き込まないようパスを限定する
-    const commitResult = await this.runGit(['commit', '-m', message, '--', 'public/']);
+    const commitResult = await this.runGit([
+      'commit',
+      '-m',
+      message,
+      '--',
+      'public/',
+    ]);
     if (!commitResult.success) {
-      return { success: false, error: `コミットに失敗しました: ${commitResult.output}` };
+      return {
+        success: false,
+        error: `コミットに失敗しました: ${commitResult.output}`,
+      };
     }
 
     if (push) {
@@ -173,7 +214,10 @@ export class GitService {
           error: `コミットは成功しましたがプッシュに失敗しました: ${pushResult.output}`,
         };
       }
-      return { success: true, message: `コミット＆プッシュしました: ${message}` };
+      return {
+        success: true,
+        message: `コミット＆プッシュしました: ${message}`,
+      };
     }
 
     return { success: true, message: `コミットしました: ${message}` };
@@ -181,7 +225,12 @@ export class GitService {
 
   /** プッシュ（upstream 未設定なら origin に設定してプッシュ） */
   private async push(): Promise<GitResult> {
-    const upstream = await this.runGit(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}']);
+    const upstream = await this.runGit([
+      'rev-parse',
+      '--abbrev-ref',
+      '--symbolic-full-name',
+      '@{u}',
+    ]);
     if (upstream.success) {
       return this.runGit(['push'], NETWORK_TIMEOUT);
     }
@@ -248,7 +297,13 @@ export class GitService {
     }
 
     // 3) 未追跡（untracked）の新規ファイル
-    const untrackedResult = await this.runGit(['ls-files', '--others', '--exclude-standard', '--', 'public/']);
+    const untrackedResult = await this.runGit([
+      'ls-files',
+      '--others',
+      '--exclude-standard',
+      '--',
+      'public/',
+    ]);
     if (untrackedResult.success) {
       normalize(untrackedResult.output).forEach((f) => filesSet.add(f));
     }
@@ -276,7 +331,10 @@ export class GitService {
 
     const statusResult = await this.runGit(['status', '--porcelain']);
     if (statusResult.success && statusResult.output.trim()) {
-      return { success: false, error: '未コミットの変更があります。先にコミットしてください。' };
+      return {
+        success: false,
+        error: '未コミットの変更があります。先にコミットしてください。',
+      };
     }
 
     const checkout = await this.checkoutDefaultAndPull();
@@ -284,16 +342,25 @@ export class GitService {
       return { success: false, error: checkout.output };
     }
 
-    const mergeResult = await this.runGit(['merge', '--no-edit', currentBranch], NETWORK_TIMEOUT);
+    const mergeResult = await this.runGit(
+      ['merge', '--no-edit', currentBranch],
+      NETWORK_TIMEOUT,
+    );
     if (!mergeResult.success) {
       await this.runGit(['merge', '--abort']);
       await this.runGit(['checkout', currentBranch]);
-      return { success: false, error: `マージに失敗しました: ${mergeResult.output}` };
+      return {
+        success: false,
+        error: `マージに失敗しました: ${mergeResult.output}`,
+      };
     }
 
     const pushResult = await this.push();
     if (!pushResult.success) {
-      return { success: false, error: `プッシュに失敗しました: ${pushResult.output}` };
+      return {
+        success: false,
+        error: `プッシュに失敗しました: ${pushResult.output}`,
+      };
     }
 
     return {
