@@ -23,6 +23,44 @@
   --holiday-bg: #ffd6d6;
 }
 
+/* ダークテーマ（VS Code が body に付与する vscode-dark / vscode-high-contrast クラスに追従） */
+body.vscode-dark,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) {
+  color-scheme: dark;
+  --bg: #1e1e1e;
+  --card: #252526;
+  --border: #404348;
+  --text: #d9dbe0;
+  --text-muted: #9ea3ad;
+  --published: #5fd69a;
+  --published-bg: #1d4a34;
+  --private: #c79bf2;
+  --private-bg: #43275f;
+  --scheduled: #78a9ff;
+  --scheduled-bg: #1f3d73;
+  --scheduled-past: #ff9a52;
+  --scheduled-past-bg: #6b3410;
+  --draft: #a7adb8;
+  --draft-bg: #3a3e45;
+  --ready: #4fd8c6;
+  --ready-bg: #14524b;
+  --today-bg: #4a4317;
+  --today-border: #d9a21b;
+  --hover: #2d3033;
+  --holiday: #ff8d80;
+  --holiday-bg: #572725;
+}
+
+body.vscode-light,
+body.vscode-high-contrast-light {
+  color-scheme: light;
+}
+
+/* ダークテーマの補助（SVG グラフの色など） */
+.c-grid { stroke: var(--border); }
+.c-axis { fill: var(--text-muted); }
+.c-total { fill: var(--text); }
+
 * {
   margin: 0;
   padding: 0;
@@ -1485,3 +1523,101 @@ button .codicon {
 .btn-publish:hover {
   background: #0a6b30;
 }
+
+/* ダークテーマ: 明色固定だった面の上書き */
+body.vscode-dark .sidebar-header,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .sidebar-header,
+body.vscode-dark .day-header,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .day-header,
+body.vscode-dark .tooltip-card .tag,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .tooltip-card .tag,
+body.vscode-dark .form-group input[readonly],
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .form-group input[readonly],
+body.vscode-dark .checkbox-label code,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .checkbox-label code {
+  background: #33373d; color: var(--text);
+}
+
+body.vscode-dark .day-header.week-num-header,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .day-header.week-num-header {
+  background: #2b2f34;
+}
+
+body.vscode-dark .day-cell.other-month,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .day-cell.other-month,
+body.vscode-dark .week-num-cell,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .week-num-cell,
+body.vscode-dark .commit-file-list,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .commit-file-list,
+body.vscode-dark .diff-status.loading,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .diff-status.loading,
+body.vscode-dark .confirm-message,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .confirm-message {
+  background: #2a2d31;
+}
+
+body.vscode-dark .day-cell.saturday,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .day-cell.saturday {
+  background: #1f2c45;
+}
+
+body.vscode-dark .day-cell.saturday .day-number,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .day-cell.saturday .day-number {
+  color: #78a9ff;
+}
+
+body.vscode-dark .day-cell.sunday,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .day-cell.sunday {
+  background: #4a2a2c;
+}
+
+body.vscode-dark .day-cell.sunday .day-number,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .day-cell.sunday .day-number {
+  color: #ff8d80;
+}
+
+body.vscode-dark .day-header.day-header-sat,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .day-header.day-header-sat {
+  color: #78a9ff;
+}
+
+body.vscode-dark .day-header.day-header-sun,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .day-header.day-header-sun {
+  color: #ff8d80;
+}
+
+body.vscode-dark .error-banner,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .error-banner {
+  background: #4d3d12; border-color: #d9a21b; color: #ffd98a;
+}
+
+body.vscode-dark .branch-banner,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .branch-banner {
+  background: #4a2527; border-color: #b85a5f; color: #ffb3b6;
+}
+
+body.vscode-dark .branch-banner.main-uncommitted,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .branch-banner.main-uncommitted {
+  background: #1c3a57; border-color: #4a8fcf; color: #9ccbff;
+}
+
+body.vscode-dark .form-preview,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .form-preview {
+  background: #2a2d31;
+}
+
+body.vscode-dark .form-error,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .form-error {
+  background: #4a2527; border-color: #b85a5f; color: #ffb3b6;
+}
+
+body.vscode-dark .qiita-toolbar,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .qiita-toolbar {
+  background: #1f3a2a; border-color: #3f7a55;
+}
+
+body.vscode-dark .tooltip-overlay,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .tooltip-overlay {
+  background: rgba(0, 0, 0, 0.6);
+}
+

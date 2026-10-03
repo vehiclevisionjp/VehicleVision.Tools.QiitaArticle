@@ -6,15 +6,15 @@ export function activate(context: vscode.ExtensionContext) {
 
   // コマンド登録
   context.subscriptions.push(
-    vscode.commands.registerCommand('articleCalendar.open', () => {
-      CalendarPanel.createOrShow(context);
-    })
+    vscode.commands.registerCommand('articleCalendar.open', () => CalendarPanel.openFromCommand(context)),
+    // ワークスペースフォルダの削除に追従
+    vscode.workspace.onDidChangeWorkspaceFolders((e) => CalendarPanel.closeRemoved(e.removed)),
   );
 
-  // 自動オープン
+  // 自動オープン（マルチルートでは Qiita 記事フォルダすべて）
   const config = vscode.workspace.getConfiguration('articleCalendar');
   if (config.get<boolean>('autoOpen', true)) {
-    CalendarPanel.createOrShow(context);
+    CalendarPanel.openAll(context);
   }
 }
 

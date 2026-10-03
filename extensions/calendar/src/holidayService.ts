@@ -21,7 +21,7 @@ export class HolidayService {
 
     try {
       const url = `https://holidays-jp.github.io/api/v1/${year}/date.json`;
-      const json = await this.fetch(url);
+      const json = await this.fetch(url, 5);
       const dict = JSON.parse(json) as Record<string, string>;
 
       const holidays: HolidayInfo[] = Object.entries(dict)
@@ -48,12 +48,17 @@ export class HolidayService {
     }
   }
 
-  private fetch(url: string): Promise<string> {
+  private fetch(url: string, redirectsLeft: number): Promise<string> {
     return new Promise((resolve, reject) => {
-      https.get(url, (res) => {
+      const req = https.get(url, { timeout: 10_000 }, (res) => {
         // リダイレクト対応
         if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-          this.fetch(res.headers.location).then(resolve, reject);
+          res.resume();
+          if (redirectsLeft <= 0) {
+            reject(new Error('リダイレクトが多すぎます'));
+            return;
+          }
+          this.fetch(new URL(res.headers.location, url).toString(), redirectsLeft - 1).then(resolve, reject);
           return;
         }
 
@@ -66,7 +71,9 @@ export class HolidayService {
             reject(new Error(`HTTP ${res.statusCode}`));
           }
         });
-      }).on('error', reject);
+      });
+      req.on('timeout', () => req.destroy(new Error('タイムアウトしました')));
+      req.on('error', reject);
     });
   }
 }

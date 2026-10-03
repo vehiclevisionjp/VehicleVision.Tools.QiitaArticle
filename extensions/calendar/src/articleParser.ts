@@ -5,6 +5,8 @@ export type ArticleStatus = 'Published' | 'Scheduled' | 'ScheduledPast' | 'Ready
 
 export interface ArticleInfo {
   slug: string;
+  /** 記事ファイルの絶対パス */
+  filePath: string;
   title: string;
   fileDate: string;
   hasDate: boolean;
@@ -39,7 +41,12 @@ export class ArticleParser {
    * ドットディレクトリ (.remote 等) はスキップ
    */
   private _walkDir(dir: string, articles: ArticleInfo[]): void {
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
     for (const entry of entries) {
       if (entry.isDirectory()) {
         if (entry.name.startsWith('.')) { continue; }
@@ -133,6 +140,7 @@ export class ArticleParser {
 
     return {
       slug: fileName,
+      filePath,
       title,
       fileDate: fileDateStr,
       hasDate: displayDate !== '',
@@ -151,7 +159,12 @@ export class ArticleParser {
    * ブロックスタイルの YAML 配列タグにも対応
    */
   private extractFrontMatter(filePath: string): { fields: Record<string, string>; tags: string[] } {
-    const content = fs.readFileSync(filePath, 'utf-8');
+    let content: string;
+    try {
+      content = fs.readFileSync(filePath, 'utf-8');
+    } catch {
+      return { fields: {}, tags: [] };
+    }
     const lines = content.split(/\r?\n/);
     const fields: Record<string, string> = {};
     const tags: string[] = [];
@@ -167,9 +180,10 @@ export class ArticleParser {
 
       // タグのブロックスタイル配列を読み取り
       if (inTags) {
-        const tagMatch = line.match(/^\s+-\s+(.+)$/);
+        const tagMatch = line.match(/^\s*-\s+(.+)$/);
         if (tagMatch) {
-          tags.push(tagMatch[1].trim().replace(/^['"]|['"]$/g, ''));
+          const t = tagMatch[1].trim().replace(/^['"]|['"]$/g, '');
+          if (t) { tags.push(t); }
           continue;
         }
         inTags = false;
@@ -182,8 +196,8 @@ export class ArticleParser {
 
         if (key === 'tags') {
           if (value) {
-            // インラインカンマ区切りタグ
-            value.split(',').forEach(t => {
+            // インラインカンマ区切り / フロースタイル ([a, b]) タグ
+            value.replace(/^\[|\]$/g, '').split(',').forEach(t => {
               const trimmed = t.trim().replace(/^['"]|['"]$/g, '');
               if (trimmed) { tags.push(trimmed); }
             });

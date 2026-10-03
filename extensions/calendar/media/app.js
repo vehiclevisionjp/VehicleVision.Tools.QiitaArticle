@@ -43,7 +43,7 @@ function getArticlePath(slug) {
 }
 
 function openInEditor(slug) {
-  apiRequest('openFile', { path: getArticlePath(slug) });
+  apiRequest('openFile', { slug: slug, path: getArticlePath(slug) });
 }
 
 // === 状態 ===
@@ -53,6 +53,7 @@ let allArticles = [];
 let holidays = {};
 let holidayErrors = [];
 let currentBranch = null;
+let defaultBranch = 'main';
 let isMainBranch = false;
 let hasUncommitted = false;
 let branchFiles = [];
@@ -116,7 +117,8 @@ async function fetchCurrentBranch() {
     const data = await apiRequest('getGitBranch');
     if (data.success) {
       currentBranch = data.branch;
-      isMainBranch = data.branch === 'main' || data.branch === 'master';
+      defaultBranch = data.defaultBranch || 'main';
+      isMainBranch = !!data.isDefault;
     } else {
       currentBranch = null;
       isMainBranch = false;
@@ -164,7 +166,7 @@ function renderBranchBanner() {
     const mergeBtn = !hasUncommitted
       ? '<button class="btn-merge-push" onclick="mergeAndPush()"><i class="codicon codicon-git-merge"></i> マージ＆プッシュ</button>'
       : '';
-    banner.innerHTML = '現在のブランチは <strong>' + escapeHtml(currentBranch) + '</strong> です。記事の追加は main ブランチでのみ可能です。'
+    banner.innerHTML = '現在のブランチは <strong>' + escapeHtml(currentBranch) + '</strong> です。記事の追加は ' + escapeHtml(defaultBranch) + ' ブランチでのみ可能です。'
       + '<div class="branch-actions">'
       + commitBtn
       + mergeBtn
@@ -172,7 +174,7 @@ function renderBranchBanner() {
     banner.style.display = 'flex';
     if (newArticleBtn) {
       newArticleBtn.disabled = true;
-      newArticleBtn.title = 'main ブランチ以外では記事を追加できません';
+      newArticleBtn.title = defaultBranch + ' ブランチ以外では記事を追加できません';
     }
   } else if (isMainBranch && hasUncommitted) {
     banner.innerHTML = '未コミットの変更があります。'
@@ -818,8 +820,8 @@ function renderYearlyChart() {
   for (var g = 0; g <= gridCount; g++) {
     var val = Math.round(g * gridStep);
     var gy = getY(val);
-    gridLines += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (W - padR) + '" y2="' + gy + '" stroke="#c9cdd4" stroke-width="1"/>';
-    gridLines += '<text x="' + (padL - 6) + '" y="' + (gy + 4) + '" text-anchor="end" fill="#555b6e" font-size="11">' + val + '</text>';
+    gridLines += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (W - padR) + '" y2="' + gy + '" class="c-grid" stroke-width="1"/>';
+    gridLines += '<text x="' + (padL - 6) + '" y="' + (gy + 4) + '" text-anchor="end" class="c-axis" font-size="11">' + val + '</text>';
   }
 
   // X軸ラベル
@@ -831,14 +833,14 @@ function renderYearlyChart() {
     var cx = getXCenter(xi);
     var showYear = (xi === 0 || wm.month === 1);
     if (showYear) {
-      xLabels += '<text x="' + cx + '" y="' + (H - 14) + '" text-anchor="middle" fill="#555b6e" font-size="9" style="' + weight + '">' + wm.year + '</text>';
-      xLabels += '<text x="' + cx + '" y="' + (H - 4) + '" text-anchor="middle" fill="#555b6e" font-size="11" style="' + weight + '">' + wm.label + '</text>';
+      xLabels += '<text x="' + cx + '" y="' + (H - 14) + '" text-anchor="middle" class="c-axis" font-size="9" style="' + weight + '">' + wm.year + '</text>';
+      xLabels += '<text x="' + cx + '" y="' + (H - 4) + '" text-anchor="middle" class="c-axis" font-size="11" style="' + weight + '">' + wm.label + '</text>';
     } else {
-      xLabels += '<text x="' + cx + '" y="' + (H - 6) + '" text-anchor="middle" fill="#555b6e" font-size="11" style="' + weight + '">' + wm.label + '</text>';
+      xLabels += '<text x="' + cx + '" y="' + (H - 6) + '" text-anchor="middle" class="c-axis" font-size="11" style="' + weight + '">' + wm.label + '</text>';
     }
   }
 
-  var pubColor = '#0f7b3f', schColor = '#0056d6', prevColor = '#e85d04';
+  var pubColor = 'var(--published)', schColor = 'var(--scheduled)', prevColor = 'var(--scheduled-past)';
 
   // 積み上げ棒グラフ（今年）
   var bars = '';
@@ -849,17 +851,17 @@ function renderYearlyChart() {
     // 公開済み（下段）
     if (currPub[bi] > 0) {
       var pubH = (currPub[bi] / maxCount) * chartH;
-      bars += '<rect x="' + x + '" y="' + (baselineY - pubH) + '" width="' + barW + '" height="' + pubH + '" fill="' + pubColor + '" opacity="0.45" rx="2"/>';
+      bars += '<rect x="' + x + '" y="' + (baselineY - pubH) + '" width="' + barW + '" height="' + pubH + '" style="fill:' + pubColor + '" opacity="0.45" rx="2"/>';
     }
     // 予約（上段）
     if (currSch[bi] > 0) {
       var pubH2 = (currPub[bi] / maxCount) * chartH;
       var schH = (currSch[bi] / maxCount) * chartH;
-      bars += '<rect x="' + x + '" y="' + (baselineY - pubH2 - schH) + '" width="' + barW + '" height="' + schH + '" fill="' + schColor + '" opacity="0.45" rx="2"/>';
+      bars += '<rect x="' + x + '" y="' + (baselineY - pubH2 - schH) + '" width="' + barW + '" height="' + schH + '" style="fill:' + schColor + '" opacity="0.45" rx="2"/>';
     }
     // 合計ラベル
     if (currTotal[bi] > 0) {
-      stackLabels += '<text x="' + cx + '" y="' + (getY(currTotal[bi]) - 5) + '" text-anchor="middle" fill="#333" font-size="10" font-weight="700">' + currTotal[bi] + '</text>';
+      stackLabels += '<text x="' + cx + '" y="' + (getY(currTotal[bi]) - 5) + '" text-anchor="middle" class="c-total" font-size="10" font-weight="700">' + currTotal[bi] + '</text>';
     }
   }
 
@@ -871,9 +873,9 @@ function renderYearlyChart() {
     var lx = getXCenter(li);
     var ly = getY(prevTotal[li]);
     linePath += (li === 0 ? 'M' : 'L') + lx + ',' + ly;
-    dots += '<circle cx="' + lx + '" cy="' + ly + '" r="4.5" fill="' + prevColor + '" stroke="#fff" stroke-width="2"/>';
+    dots += '<circle cx="' + lx + '" cy="' + ly + '" r="4.5" style="fill:' + prevColor + ';stroke:var(--card)" stroke-width="2"/>';
     if (prevTotal[li] > 0) {
-      prevLabels += '<text x="' + lx + '" y="' + (ly - 9) + '" text-anchor="middle" fill="' + prevColor + '" font-size="9" font-weight="600">' + prevTotal[li] + '</text>';
+      prevLabels += '<text x="' + lx + '" y="' + (ly - 9) + '" text-anchor="middle" style="fill:' + prevColor + '" font-size="9" font-weight="600">' + prevTotal[li] + '</text>';
     }
   }
 
@@ -883,10 +885,10 @@ function renderYearlyChart() {
     var diff = currTotal[di] - prevTotal[di];
     if (currTotal[di] > 0 || prevTotal[di] > 0) {
       var color, label;
-      if (diff > 0) { color = '#0f7b3f'; label = '+' + diff; }
-      else if (diff < 0) { color = '#c9190b'; label = '' + diff; }
-      else { color = '#555b6e'; label = '±0'; }
-      diffLabels += '<text x="' + getXCenter(di) + '" y="' + (H - 18) + '" text-anchor="middle" fill="' + color + '" font-size="9">' + label + '</text>';
+      if (diff > 0) { color = 'var(--published)'; label = '+' + diff; }
+      else if (diff < 0) { color = 'var(--holiday)'; label = '' + diff; }
+      else { color = 'var(--text-muted)'; label = '±0'; }
+      diffLabels += '<text x="' + getXCenter(di) + '" y="' + (H - 18) + '" text-anchor="middle" style="fill:' + color + '" font-size="9">' + label + '</text>';
     }
   }
 
@@ -899,7 +901,7 @@ function renderYearlyChart() {
     + xLabels
     + diffLabels
     + bars
-    + '<path d="' + linePath + '" fill="none" stroke="' + prevColor + '" stroke-width="2.5" stroke-linejoin="round" stroke-dasharray="6 3"/>'
+    + '<path d="' + linePath + '" fill="none" style="stroke:' + prevColor + '" stroke-width="2.5" stroke-linejoin="round" stroke-dasharray="6 3"/>'
     + dots
     + prevLabels
     + stackLabels
@@ -1134,7 +1136,7 @@ document.addEventListener('keydown', function(e) {
 // === 記事作成 ===
 async function openCreateModal(dateStr) {
   if (!isMainBranch) {
-    showNotification('⚠️ main ブランチ以外では記事を追加できません');
+    showNotification('⚠️ ' + defaultBranch + ' ブランチ以外では記事を追加できません');
     return;
   }
   document.getElementById('createTitle').value = '';
@@ -1213,9 +1215,10 @@ async function updateBranchInfo() {
   try {
     var data = await apiRequest('getGitBranch');
     if (data.success) {
-      var isMain = data.branch === 'main' || data.branch === 'master';
+      var isMain = !!data.isDefault;
+      var defBranch = data.defaultBranch || 'main';
       var icon = isMain ? '<i class="codicon codicon-check"></i>' : '<i class="codicon codicon-warning"></i>';
-      var warn = isMain ? '' : '（main 以外のブランチです。main に切り替えてから作成します）';
+      var warn = isMain ? '' : '（' + defBranch + ' 以外のブランチです。' + defBranch + ' に切り替えてから作成します）';
       infoEl.innerHTML = icon + ' 現在のブランチ: <strong>' + escapeHtml(data.branch) + '</strong> ' + warn;
       infoEl.className = 'branch-info ' + (isMain ? '' : 'branch-warn');
     } else {
