@@ -62,6 +62,8 @@ jobs:
         working-directory: extensions/calendar
         run: |
           npm install
+          npm run typecheck
+          npm test
           npm run build
           npx --yes @vscode/vsce package --no-dependencies \
             -o VehicleVision.Tools.QiitaArticle.Calendar.vsix
@@ -71,6 +73,8 @@ jobs:
         working-directory: extensions/markdown-preview
         run: |
           npm install
+          npm run typecheck
+          npm test
           npm run build
           npx --yes @vscode/vsce package --no-dependencies \
             -o VehicleVision.Tools.QiitaArticle.MarkdownPreview.vsix

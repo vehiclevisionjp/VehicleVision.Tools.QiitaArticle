@@ -121,6 +121,9 @@ npm install
 
 VS Code 内にカレンダー UI を表示し、記事の管理・作成・Git 操作をすべて GUI で行えます。  
 ワークスペースに `qiita.config.json` または `public/` ディレクトリが存在すると自動的にアクティブになります。
+マルチルートワークスペースでは、Qiita 記事フォルダごとにカレンダーを開けます。VS Code のテーマ（ライト / ダーク / ハイコントラスト）にも自動で追従します。
+
+![calendar-overview-dark](images/calendar-overview-dark.png)
 
 #### カレンダー表示・ステータス色分け
 
