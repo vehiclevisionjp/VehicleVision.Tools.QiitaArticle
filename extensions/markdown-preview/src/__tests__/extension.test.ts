@@ -115,8 +115,8 @@ describe('footnotePlugin', () => {
     const result = md.render(
       'First[^a] second[^b]\n\n[^a]: First note\n\n[^b]: Second note',
     );
-    expect(result).toContain('fn-a');
-    expect(result).toContain('fn-b');
+    expect(result).toContain('fn-1');
+    expect(result).toContain('fn-2');
     expect(result).toContain('First note');
     expect(result).toContain('Second note');
   });

@@ -1,4 +1,7 @@
 import type MarkdownIt from 'markdown-it';
+import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 
 /**
  * Qiita Markdown Preview - VS Code 拡張機能
@@ -7,18 +10,25 @@ import type MarkdownIt from 'markdown-it';
  *
  * 対応構文:
  * - :::note info/warn/alert ブロック
- * - コードブロックの lang:filename 記法
- * - ```math 数式ブロック（KaTeX 連携）
+ * - コードブロックの lang:filename 記法 / diff_言語 記法
+ * - ```math 数式ブロック・$`...`$ インライン数式（KaTeX 連携）
  * - インラインカラーコード (#FFF, rgb(), hsl())
  * - 改行の自動 <br> 変換 (HARDBREAKS)
  * - 脚注 [^1] (footnotes)
- * - 埋め込みコンテンツ (YouTube, Twitter/X, CodePen, Gist 等)
+ * - タスクリスト / 絵文字ショートコード (:smile:)
+ * - 埋め込みコンテンツ (YouTube, Twitter/X, CodePen, Gist, GitHub 等)
+ *
+ * マルチルートワークスペースでは、Qiita 記事フォルダ（qiita.config.json を含む、
+ * または public/ 配下）のドキュメントにのみ適用し、他フォルダの Markdown には影響しない。
  */
 export function activate() {
   return {
     extendMarkdownIt(md: MarkdownIt) {
-      // Qiita は改行をそのまま <br> に変換する
-      md.set({ breaks: true });
+      // VS Code 側で設定された改行の扱い（Qiita 以外のドキュメントではこれに戻す）
+      const originalBreaks = !!md.options.breaks;
+
+      // レンダリングごとに対象ドキュメントかを判定する
+      qiitaGatePlugin(md, originalBreaks);
 
       // :::note ブロック
       noteBlockPlugin(md);
@@ -26,7 +36,10 @@ export function activate() {
       // ```math 数式ブロック → math_block トークンに変換
       mathFencePlugin(md);
 
-      // コードブロック lang:filename
+      // $`...`$ インライン数式
+      inlineMathPlugin(md);
+
+      // コードブロック lang:filename / diff_lang
       codeFilenamePlugin(md);
 
       // インラインカラーコード
@@ -35,12 +48,74 @@ export function activate() {
       // 脚注
       footnotePlugin(md);
 
+      // タスクリスト・絵文字
+      taskListPlugin(md);
+      emojiPlugin(md);
+
       // 埋め込みコンテンツ
       embedPlugin(md);
 
       return md;
     },
   };
+}
+
+// =====================================================================
+// 対象ドキュメントの判定（マルチルートワークスペース対応）
+// =====================================================================
+
+function normalizePath(p: string): string {
+  const n = path.resolve(p);
+  return process.platform === 'win32' ? n.toLowerCase() : n;
+}
+
+/**
+ * ドキュメントが Qiita 記事かどうか。
+ * - いずれかのワークスペースフォルダの public/ 配下
+ * - qiita.config.json を持つワークスペースフォルダ配下
+ * ドキュメント不明（env に currentDocument なし）の場合は対象とみなす。
+ */
+function isQiitaDocument(currentDocument: unknown): boolean {
+  let fsPath: string | undefined;
+  if (typeof currentDocument === 'string') {
+    fsPath = currentDocument;
+  } else if (
+    currentDocument &&
+    typeof (currentDocument as vscode.Uri).fsPath === 'string'
+  ) {
+    fsPath = (currentDocument as vscode.Uri).fsPath;
+  }
+  if (!fsPath) {
+    return true;
+  }
+
+  const doc = normalizePath(fsPath);
+  for (const folder of vscode.workspace.workspaceFolders ?? []) {
+    const root = normalizePath(folder.uri.fsPath);
+    if (doc !== root && !doc.startsWith(root + path.sep)) {
+      continue;
+    }
+    if (doc.startsWith(path.join(root, 'public') + path.sep)) {
+      return true;
+    }
+    if (fs.existsSync(path.join(folder.uri.fsPath, 'qiita.config.json'))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function qiitaGatePlugin(md: MarkdownIt, originalBreaks: boolean) {
+  md.core.ruler.before('normalize', 'qiita_gate', (state) => {
+    const enabled = isQiitaDocument(state.env?.currentDocument);
+    state.env.qiitaEnabled = enabled;
+    // Qiita は改行をそのまま <br> に変換する
+    state.md.options.breaks = enabled ? true : originalBreaks;
+  });
+}
+
+function isQiita(env: any): boolean {
+  return !!env && env.qiitaEnabled !== false;
 }
 
 // =====================================================================
@@ -57,6 +132,10 @@ function noteBlockPlugin(md: MarkdownIt) {
     'fence',
     'qiita_note',
     (state, startLine, endLine, silent) => {
+      if (!isQiita(state.env)) return false;
+      // インデントされたコードブロックは対象外
+      if (state.sCount[startLine] - state.blkIndent >= 4) return false;
+
       const pos = state.bMarks[startLine] + state.tShift[startLine];
       const max = state.eMarks[startLine];
       const lineText = state.src.slice(pos, max).trim();
@@ -68,7 +147,7 @@ function noteBlockPlugin(md: MarkdownIt) {
       // 閉じ ::: を探す（コードフェンス内の ::: は無視）
       let nextLine = startLine + 1;
       let found = false;
-      let inFence = false;
+      let fenceMarker = '';
 
       for (; nextLine < endLine; nextLine++) {
         const linePos = state.bMarks[nextLine] + state.tShift[nextLine];
@@ -76,12 +155,21 @@ function noteBlockPlugin(md: MarkdownIt) {
         const line = state.src.slice(linePos, lineMax).trim();
 
         // コードフェンスの開閉を追跡
-        if (line.startsWith('```') || line.startsWith('~~~')) {
-          inFence = !inFence;
+        const fenceMatch = line.match(/^(`{3,}|~{3,})/);
+        if (fenceMatch) {
+          if (!fenceMarker) {
+            fenceMarker = fenceMatch[1];
+          } else if (
+            fenceMatch[1][0] === fenceMarker[0] &&
+            fenceMatch[1].length >= fenceMarker.length &&
+            line.replace(/[`~]/g, '').trim() === ''
+          ) {
+            fenceMarker = '';
+          }
           continue;
         }
 
-        if (!inFence && line === ':::') {
+        if (!fenceMarker && line === ':::') {
           found = true;
           break;
         }
@@ -136,6 +224,7 @@ function mathFencePlugin(md: MarkdownIt) {
   // KaTeX が無効の場合は、フォールバックとして数式テキストを表示する。
 
   md.core.ruler.after('block', 'qiita_math_fence', (state) => {
+    if (!isQiita(state.env)) return;
     for (const token of state.tokens) {
       if (token.type === 'fence' && token.info.trim() === 'math') {
         token.type = 'math_block';
@@ -146,9 +235,8 @@ function mathFencePlugin(md: MarkdownIt) {
   });
 
   // math_block レンダラーが未登録の場合のフォールバック
-  // （VS Code で math が無効化されている場合）
-  const existingMathRenderer = md.renderer.rules.math_block;
-  if (!existingMathRenderer) {
+  // （VS Code で math が無効化されている場合。KaTeX があれば後から上書きされる）
+  if (!md.renderer.rules.math_block) {
     md.renderer.rules.math_block = (tokens, idx) => {
       const content = tokens[idx].content.trim();
       return `<div class="qiita-math-block"><pre class="qiita-math-fallback">${escapeHtml(content)}</pre></div>\n`;
@@ -157,44 +245,113 @@ function mathFencePlugin(md: MarkdownIt) {
 }
 
 // =====================================================================
-// コードブロック lang:filename 記法
+// インライン数式 $`...`$
+// =====================================================================
+
+function inlineMathPlugin(md: MarkdownIt) {
+  // KaTeX の `$...$` ルールより先に評価されるよう、先頭に挿入する
+  md.inline.ruler.before('text', 'qiita_math_inline', (state, silent) => {
+    const src = state.src;
+    const pos = state.pos;
+    if (
+      src.charCodeAt(pos) !== 0x24 /* $ */ ||
+      src.charCodeAt(pos + 1) !== 0x60 /* ` */
+    ) {
+      return false;
+    }
+    if (!isQiita(state.env)) return false;
+
+    const end = src.indexOf('`$', pos + 2);
+    if (end < 0 || end >= state.posMax) return false;
+
+    const content = src.slice(pos + 2, end);
+    if (!content.trim()) return false;
+
+    if (!silent) {
+      const token = state.push('math_inline', 'math', 0);
+      token.markup = '$';
+      token.content = content;
+    }
+    state.pos = end + 2;
+    return true;
+  });
+
+  // KaTeX が無効な場合のフォールバック
+  if (!md.renderer.rules.math_inline) {
+    md.renderer.rules.math_inline = (tokens, idx) =>
+      `<code class="qiita-math-inline">${escapeHtml(tokens[idx].content)}</code>`;
+  }
+}
+
+// =====================================================================
+// コードブロック lang:filename / diff_lang 記法
 // =====================================================================
 
 function codeFilenamePlugin(md: MarkdownIt) {
   const defaultFence = md.renderer.rules.fence;
 
-  md.renderer.rules.fence = (tokens, idx, options, env, self) => {
-    const token = tokens[idx];
-    const info = token.info ? token.info.trim() : '';
-
-    // lang:filename 形式をチェック
-    const colonIndex = info.indexOf(':');
-
-    if (colonIndex > 0) {
-      const lang = info.substring(0, colonIndex);
-      const filename = info.substring(colonIndex + 1);
-
-      // token.info を lang 部分のみに更新してシンタックスハイライトを適用
-      token.info = lang;
-
-      // デフォルトのフェンスレンダリング
-      let rendered = '';
-      if (defaultFence) {
-        rendered = defaultFence(tokens, idx, options, env, self);
-      } else {
-        rendered = self.renderToken(tokens, idx, options);
-      }
-
-      // ファイル名ヘッダーを追加
-      const filenameHtml = `<div class="qiita-code-filename"><span>${escapeHtml(filename)}</span></div>`;
-      return `<div class="qiita-code-frame" data-lang="${escapeHtml(lang)}">${filenameHtml}${rendered}</div>`;
-    }
-
-    // lang:filename 形式でない場合はそのままレンダリング
+  const renderDefault: NonNullable<typeof defaultFence> = (
+    tokens,
+    idx,
+    options,
+    env,
+    self,
+  ) => {
     if (defaultFence) {
       return defaultFence(tokens, idx, options, env, self);
     }
     return self.renderToken(tokens, idx, options);
+  };
+
+  md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+    const token = tokens[idx];
+    const info = token.info ? token.info.trim() : '';
+
+    if (!isQiita(env) || !info) {
+      return renderDefault(tokens, idx, options, env, self);
+    }
+
+    // lang:filename 形式をチェック
+    const colonIndex = info.indexOf(':');
+    const lang = colonIndex > 0 ? info.substring(0, colonIndex) : info;
+    const filename = colonIndex > 0 ? info.substring(colonIndex + 1) : '';
+    const isDiff = /^diff_/.test(lang);
+
+    if (!filename && !isDiff) {
+      return renderDefault(tokens, idx, options, env, self);
+    }
+
+    let rendered: string;
+    if (isDiff) {
+      // diff_言語: 先頭の +/- で行を色分けする
+      const lines = token.content.replace(/\n$/, '').split('\n');
+      const body = lines
+        .map((line) => {
+          const cls = line.startsWith('+')
+            ? 'add'
+            : line.startsWith('-')
+              ? 'del'
+              : 'ctx';
+          return `<span class="qiita-diff-line qiita-diff-${cls}">${escapeHtml(line) || ' '}</span>`;
+        })
+        .join('\n');
+      rendered = `<pre class="qiita-diff"><code class="language-${escapeHtml(lang)}">${body}\n</code></pre>\n`;
+    } else {
+      // token.info を一時的に lang 部分のみにしてシンタックスハイライトを適用（描画後に戻す）
+      token.info = lang;
+      try {
+        rendered = renderDefault(tokens, idx, options, env, self);
+      } finally {
+        token.info = info;
+      }
+    }
+
+    if (!filename) {
+      return rendered;
+    }
+
+    const filenameHtml = `<div class="qiita-code-filename"><span>${escapeHtml(filename)}</span></div>`;
+    return `<div class="qiita-code-frame" data-lang="${escapeHtml(lang)}">${filenameHtml}${rendered}</div>\n`;
   };
 }
 
@@ -209,29 +366,35 @@ function inlineColorPlugin(md: MarkdownIt) {
     const token = tokens[idx];
     const content = token.content.trim();
 
-    // カラーコードパターン
-    const colorPatterns = [
-      // HEX: #FFF, #FF0000
-      /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/,
-      // rgb/rgba
-      /^rgba?\s*\([\d\s%,./]+\)$/,
-      // hsl/hsla
-      /^hsla?\s*\([\d\s%,./deg rad grad turn]+\)$/i,
-    ];
-
-    const isColor = colorPatterns.some((pattern) => pattern.test(content));
-
     let rendered = '';
     if (defaultCodeInline) {
       rendered = defaultCodeInline(tokens, idx, options, env, self);
     } else {
-      rendered = `<code>${escapeHtml(content)}</code>`;
+      rendered = `<code>${escapeHtml(token.content)}</code>`;
     }
 
-    if (isColor) {
+    if (!isQiita(env)) {
+      return rendered;
+    }
+
+    // カラーコードパターン
+    const colorPatterns = [
+      // HEX: #FFF, #FF0000
+      /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/,
+      // rgb/rgba
+      /^rgba?\s*\([\d\s%,./]+\)$/i,
+      // hsl/hsla
+      /^hsla?\s*\([\d\s%,./a-z]+\)$/i,
+    ];
+
+    if (colorPatterns.some((pattern) => pattern.test(content))) {
       const colorSpan = `<span class="qiita-inline-color" style="background-color: ${escapeHtml(content)};"></span>`;
-      // </code> の前にカラースパンを挿入
-      rendered = rendered.replace('</code>', `${colorSpan}</code>`);
+      // 末尾の </code> の前にカラースパンを挿入
+      const closeIdx = rendered.lastIndexOf('</code>');
+      if (closeIdx >= 0) {
+        rendered =
+          rendered.slice(0, closeIdx) + colorSpan + rendered.slice(closeIdx);
+      }
     }
 
     return rendered;
@@ -242,68 +405,74 @@ function inlineColorPlugin(md: MarkdownIt) {
 // 脚注 [^1] (footnotes)
 // =====================================================================
 
-function footnotePlugin(md: MarkdownIt) {
-  // 脚注定義: [^label]: 本文 を収集
-  // 脚注参照: [^label] をインラインリンクに変換
+interface FootnoteEnv {
+  /** ラベル → 定義本文 */
+  footnotes: Record<string, string>;
+  /** 参照された順のラベル（番号は 1 始まりの位置） */
+  footnoteOrder: string[];
+  /** ラベルごとの参照回数 */
+  footnoteRefCount: Record<string, number>;
+}
 
-  // --- ブロックルール: 脚注定義を収集 ---
+function footnotePlugin(md: MarkdownIt) {
+  // --- ブロックルール: 脚注定義を収集（表示はドキュメント末尾にまとめる） ---
   md.block.ruler.before(
     'reference',
     'qiita_footnote_def',
     (state, startLine, endLine, silent) => {
+      if (!isQiita(state.env)) return false;
+      if (state.sCount[startLine] - state.blkIndent >= 4) return false;
+
       const pos = state.bMarks[startLine] + state.tShift[startLine];
       const max = state.eMarks[startLine];
       const lineText = state.src.slice(pos, max);
 
       // [^label]: で始まる行を検出
-      const match = lineText.match(/^\[\^([^\]]+)\]:\s+(.*)/);
+      const match = lineText.match(/^\[\^([^\]\s]+)\]:\s*(.*)/);
       if (!match) return false;
       if (silent) return true;
 
       const label = match[1];
-      const firstLineContent = match[2];
-
-      // 複数行の脚注定義を収集（次行がインデントされている場合）
-      let content = firstLineContent;
+      let content = match[2];
       let nextLine = startLine + 1;
-      while (nextLine < endLine) {
-        const nextPos = state.bMarks[nextLine] + state.tShift[nextLine];
-        const nextMax = state.eMarks[nextLine];
-        const nextText = state.src.slice(nextPos, nextMax);
 
-        // インデントが2スペース以上 or タブなら継続行
-        const rawLineStart = state.bMarks[nextLine];
-        const rawPrefix = state.src.slice(rawLineStart, nextPos);
-        if (
-          rawPrefix.length < 2 &&
-          rawPrefix.indexOf('\t') === -1 &&
-          nextText.length > 0
-        )
+      const isBlank = (line: number) =>
+        state.src.slice(
+          state.bMarks[line] + state.tShift[line],
+          state.eMarks[line],
+        ).length === 0;
+
+      // 複数行の脚注定義を収集（インデントされた継続行、または空行を挟んだインデント行）
+      while (nextLine < endLine) {
+        if (isBlank(nextLine)) {
+          // 空行: 次の非空行がインデントされていれば脚注に含める
+          let peek = nextLine + 1;
+          while (peek < endLine && isBlank(peek)) {
+            peek++;
+          }
+          if (peek < endLine && state.sCount[peek] - state.blkIndent >= 2) {
+            content += '\n';
+            nextLine++;
+            continue;
+          }
           break;
-        if (nextText.length === 0) {
-          // 空行は許容するが、次の行もチェック
-          content += '\n';
-          nextLine++;
-          continue;
         }
 
-        content += '\n' + nextText;
+        if (state.sCount[nextLine] - state.blkIndent < 2) break;
+        content +=
+          '\n' +
+          state.src.slice(
+            state.bMarks[nextLine] + state.tShift[nextLine],
+            state.eMarks[nextLine],
+          );
         nextLine++;
       }
 
-      // 脚注定義を env に保存（レンダリング時に参照）
-      if (!state.env.footnotes) state.env.footnotes = {};
-      if (!state.env.footnoteOrder) state.env.footnoteOrder = [];
-      state.env.footnotes[label] = content.trim();
-      if (state.env.footnoteOrder.indexOf(label) === -1) {
-        state.env.footnoteOrder.push(label);
+      const env = state.env as Partial<FootnoteEnv>;
+      if (!env.footnotes) env.footnotes = {};
+      if (!(label in env.footnotes)) {
+        env.footnotes[label] = content.trim();
       }
-
-      // 空のトークンを生成（脚注定義自体は表示しない）
-      const token = state.push('footnote_def', '', 0);
-      token.meta = { label };
-      token.map = [startLine, nextLine];
-      token.hidden = true;
 
       state.line = nextLine;
       return true;
@@ -316,33 +485,36 @@ function footnotePlugin(md: MarkdownIt) {
     const pos = state.pos;
     const max = state.posMax;
 
-    if (pos + 2 >= max) return false;
+    if (pos + 3 >= max) return false;
     if (src.charCodeAt(pos) !== 0x5b /* [ */) return false;
     if (src.charCodeAt(pos + 1) !== 0x5e /* ^ */) return false;
+    if (!isQiita(state.env)) return false;
 
     // ラベルの終端 ] を探す
-    let labelEnd = pos + 2;
-    while (labelEnd < max && src.charCodeAt(labelEnd) !== 0x5d /* ] */) {
-      labelEnd++;
-    }
-    if (labelEnd >= max) return false;
-    if (labelEnd === pos + 2) return false; // 空ラベル
+    const labelEnd = src.indexOf(']', pos + 2);
+    if (labelEnd < 0 || labelEnd >= max || labelEnd === pos + 2) return false;
 
     const label = src.slice(pos + 2, labelEnd);
+    if (/\s/.test(label)) return false;
 
-    if (silent) {
-      state.pos = labelEnd + 1;
-      return true;
-    }
+    // 定義のない参照は通常のテキストとして扱う
+    const env = state.env as Partial<FootnoteEnv>;
+    if (!env.footnotes || !(label in env.footnotes)) return false;
 
-    // 脚注参照トークンを生成
-    const token = state.push('footnote_ref', '', 0);
-    token.meta = { label };
+    if (!silent) {
+      if (!env.footnoteOrder) env.footnoteOrder = [];
+      if (!env.footnoteRefCount) env.footnoteRefCount = {};
 
-    // 参照順序を記録
-    if (!state.env.footnoteOrder) state.env.footnoteOrder = [];
-    if (state.env.footnoteOrder.indexOf(label) === -1) {
-      state.env.footnoteOrder.push(label);
+      let order = env.footnoteOrder.indexOf(label);
+      if (order === -1) {
+        env.footnoteOrder.push(label);
+        order = env.footnoteOrder.length - 1;
+      }
+      const refIndex = (env.footnoteRefCount[label] =
+        (env.footnoteRefCount[label] || 0) + 1);
+
+      const token = state.push('footnote_ref', '', 0);
+      token.meta = { label, num: order + 1, refIndex };
     }
 
     state.pos = labelEnd + 1;
@@ -351,61 +523,274 @@ function footnotePlugin(md: MarkdownIt) {
 
   // --- コアルール: 脚注セクションをドキュメント末尾に追加 ---
   md.core.ruler.after('inline', 'qiita_footnote_tail', (state) => {
-    const footnotes = state.env.footnotes;
-    const order = state.env.footnoteOrder;
+    const env = state.env as Partial<FootnoteEnv>;
+    const footnotes = env.footnotes;
+    const order = env.footnoteOrder;
     if (!footnotes || !order || order.length === 0) return;
 
-    // 脚注定義トークン（hidden）を除去
-    state.tokens = state.tokens.filter((t) => t.type !== 'footnote_def');
+    const parts: string[] = [
+      '<section class="qiita-footnotes"><hr class="qiita-footnotes-sep">\n<ol class="qiita-footnotes-list">\n',
+    ];
 
-    // ドキュメント末尾に脚注セクションを追加
-    const openToken = new state.Token('html_block', '', 0);
-    openToken.content =
-      '<section class="qiita-footnotes"><hr class="qiita-footnotes-sep">\n<ol class="qiita-footnotes-list">\n';
-    state.tokens.push(openToken);
+    order.forEach((label, i) => {
+      const num = i + 1;
+      // 脚注本文の中の脚注参照は再帰させない（footnotes を空にした別 env で描画）
+      const renderedContent = md.renderInline(footnotes[label] || label, {
+        qiitaEnabled: true,
+        footnotes: {},
+      });
+      const count = env.footnoteRefCount?.[label] ?? 1;
+      let backrefs = '';
+      for (let r = 1; r <= count; r++) {
+        const refId = r === 1 ? `fnref-${num}` : `fnref-${num}-${r}`;
+        backrefs += `<a href="#${refId}" class="qiita-footnote-backref" title="戻る">↩</a>`;
+      }
+      parts.push(
+        `<li id="fn-${num}" class="qiita-footnote-item"><p>${renderedContent} ${backrefs}</p></li>\n`,
+      );
+    });
 
-    for (let i = 0; i < order.length; i++) {
-      const label = order[i];
-      const content = footnotes[label] || label;
+    parts.push('</ol>\n</section>\n');
 
-      const itemToken = new state.Token('html_block', '', 0);
-      const renderedContent = md.renderInline(content, {});
-      itemToken.content =
-        `<li id="fn-${escapeHtml(label)}" class="qiita-footnote-item">` +
-        `<p>${renderedContent} ` +
-        `<a href="#fnref-${escapeHtml(label)}" class="qiita-footnote-backref" title="戻る">↩</a></p></li>\n`;
-      state.tokens.push(itemToken);
-    }
-
-    const closeToken = new state.Token('html_block', '', 0);
-    closeToken.content = '</ol>\n</section>\n';
-    state.tokens.push(closeToken);
+    const token = new state.Token('html_block', '', 0);
+    token.content = parts.join('');
+    state.tokens.push(token);
   });
 
   // --- レンダラー: 脚注参照をリンクとして描画 ---
   md.renderer.rules.footnote_ref = (tokens, idx) => {
-    const label = tokens[idx].meta.label;
-    const order: string[] = tokens[idx].meta.order || [];
-    let num = order.indexOf(label) + 1;
-    if (num === 0) num = parseInt(label, 10) || 1;
-
-    return (
-      `<sup class="qiita-footnote-ref">` +
-      `<a href="#fn-${escapeHtml(label)}" id="fnref-${escapeHtml(label)}">${num}</a></sup>`
-    );
+    const { num, refIndex } = tokens[idx].meta;
+    const id = refIndex === 1 ? `fnref-${num}` : `fnref-${num}-${refIndex}`;
+    return `<sup class="qiita-footnote-ref"><a href="#fn-${num}" id="${id}">${num}</a></sup>`;
   };
+}
 
-  // コアルールで footnoteOrder を参照トークンに渡す
-  md.core.ruler.after('qiita_footnote_tail', 'qiita_footnote_env', (state) => {
-    const order = state.env.footnoteOrder;
-    if (!order) return;
-    for (const token of state.tokens) {
-      if (token.type === 'inline' && token.children) {
-        for (const child of token.children) {
-          if (child.type === 'footnote_ref') {
-            child.meta.order = order;
+// =====================================================================
+// タスクリスト - [ ] / - [x]
+// =====================================================================
+
+function taskListPlugin(md: MarkdownIt) {
+  md.core.ruler.after('inline', 'qiita_task_list', (state) => {
+    if (!isQiita(state.env)) return;
+    const tokens = state.tokens;
+    for (let i = 2; i < tokens.length; i++) {
+      const t = tokens[i];
+      if (
+        t.type !== 'inline' ||
+        tokens[i - 1].type !== 'paragraph_open' ||
+        tokens[i - 2].type !== 'list_item_open' ||
+        !t.children ||
+        t.children.length === 0 ||
+        t.children[0].type !== 'text'
+      ) {
+        continue;
+      }
+      const m = t.children[0].content.match(/^\[([ xX])\][ \t]+/);
+      if (!m) continue;
+
+      const checked = m[1] !== ' ';
+      t.children[0].content = t.children[0].content.slice(m[0].length);
+      const box = new state.Token('html_inline', '', 0);
+      box.content = `<input class="qiita-task-checkbox" type="checkbox" disabled${checked ? ' checked' : ''}> `;
+      t.children.unshift(box);
+
+      tokens[i - 2].attrJoin('class', 'qiita-task-list-item');
+      // 直近の親リストにもクラスを付与
+      for (let j = i - 3; j >= 0; j--) {
+        if (
+          tokens[j].type === 'bullet_list_open' ||
+          tokens[j].type === 'ordered_list_open'
+        ) {
+          if (!(tokens[j].attrGet('class') ?? '').includes('qiita-task-list')) {
+            tokens[j].attrJoin('class', 'qiita-task-list');
           }
+          break;
         }
+      }
+    }
+  });
+}
+
+// =====================================================================
+// 絵文字ショートコード :smile:
+// =====================================================================
+
+const EMOJI_MAP: Record<string, string> = {
+  smile: '😄',
+  smiley: '😃',
+  grinning: '😀',
+  grin: '😁',
+  laughing: '😆',
+  joy: '😂',
+  rofl: '🤣',
+  blush: '😊',
+  wink: '😉',
+  heart_eyes: '😍',
+  sunglasses: '😎',
+  thinking: '🤔',
+  neutral_face: '😐',
+  sweat_smile: '😅',
+  sob: '😭',
+  cry: '😢',
+  scream: '😱',
+  angry: '😠',
+  rage: '😡',
+  sleeping: '😴',
+  relaxed: '☺️',
+  innocent: '😇',
+  slightly_smiling_face: '🙂',
+  upside_down_face: '🙃',
+  confused: '😕',
+  disappointed: '😞',
+  worried: '😟',
+  flushed: '😳',
+  sweat: '😓',
+  tired_face: '😫',
+  yum: '😋',
+  thumbsup: '👍',
+  '+1': '👍',
+  thumbsdown: '👎',
+  '-1': '👎',
+  ok_hand: '👌',
+  clap: '👏',
+  pray: '🙏',
+  muscle: '💪',
+  wave: '👋',
+  raised_hands: '🙌',
+  point_up: '☝️',
+  point_down: '👇',
+  point_left: '👈',
+  point_right: '👉',
+  eyes: '👀',
+  fist: '✊',
+  v: '✌️',
+  handshake: '🤝',
+  heart: '❤️',
+  blue_heart: '💙',
+  green_heart: '💚',
+  yellow_heart: '💛',
+  purple_heart: '💜',
+  broken_heart: '💔',
+  sparkles: '✨',
+  star: '⭐',
+  star2: '🌟',
+  fire: '🔥',
+  boom: '💥',
+  zap: '⚡',
+  tada: '🎉',
+  confetti_ball: '🎊',
+  gift: '🎁',
+  trophy: '🏆',
+  medal_sports: '🏅',
+  crown: '👑',
+  rocket: '🚀',
+  airplane: '✈️',
+  car: '🚗',
+  bulb: '💡',
+  memo: '📝',
+  pencil: '✏️',
+  book: '📖',
+  books: '📚',
+  bookmark: '🔖',
+  link: '🔗',
+  paperclip: '📎',
+  pushpin: '📌',
+  calendar: '📆',
+  date: '📅',
+  clock: '🕐',
+  hourglass: '⌛',
+  bell: '🔔',
+  mega: '📣',
+  loudspeaker: '📢',
+  mag: '🔍',
+  lock: '🔒',
+  unlock: '🔓',
+  key: '🔑',
+  wrench: '🔧',
+  hammer: '🔨',
+  gear: '⚙️',
+  computer: '💻',
+  desktop_computer: '🖥️',
+  keyboard: '⌨️',
+  iphone: '📱',
+  email: '📧',
+  envelope: '✉️',
+  package: '📦',
+  chart_with_upwards_trend: '📈',
+  chart_with_downwards_trend: '📉',
+  bar_chart: '📊',
+  warning: '⚠️',
+  no_entry: '⛔',
+  no_entry_sign: '🚫',
+  x: '❌',
+  o: '⭕',
+  white_check_mark: '✅',
+  heavy_check_mark: '✔️',
+  ballot_box_with_check: '☑️',
+  question: '❓',
+  exclamation: '❗',
+  information_source: 'ℹ️',
+  bangbang: '‼️',
+  '100': '💯',
+  recycle: '♻️',
+  construction: '🚧',
+  bug: '🐛',
+  ant: '🐜',
+  bee: '🐝',
+  beetle: '🐞',
+  snake: '🐍',
+  whale: '🐳',
+  dog: '🐶',
+  cat: '🐱',
+  penguin: '🐧',
+  octopus: '🐙',
+  tiger: '🐯',
+  bird: '🐦',
+  hatching_chick: '🐣',
+  turtle: '🐢',
+  sunny: '☀️',
+  cloud: '☁️',
+  umbrella: '☔',
+  snowflake: '❄️',
+  rainbow: '🌈',
+  earth_asia: '🌏',
+  coffee: '☕',
+  beer: '🍺',
+  pizza: '🍕',
+  apple: '🍎',
+  cake: '🍰',
+  sushi: '🍣',
+  ramen: '🍜',
+  arrow_right: '➡️',
+  arrow_left: '⬅️',
+  arrow_up: '⬆️',
+  arrow_down: '⬇️',
+  arrows_counterclockwise: '🔄',
+  zzz: '💤',
+  speech_balloon: '💬',
+  thought_balloon: '💭',
+  see_no_evil: '🙈',
+  hear_no_evil: '🙉',
+  speak_no_evil: '🙊',
+  skull: '💀',
+  ghost: '👻',
+  robot: '🤖',
+  alien: '👽',
+  poop: '💩',
+};
+
+function emojiPlugin(md: MarkdownIt) {
+  md.core.ruler.after('inline', 'qiita_emoji', (state) => {
+    if (!isQiita(state.env)) return;
+    for (const blockToken of state.tokens) {
+      if (blockToken.type !== 'inline' || !blockToken.children) continue;
+      for (const child of blockToken.children) {
+        // text トークンのみ置換（コードスパン・HTML は別トークンなので対象外）
+        if (child.type !== 'text' || !child.content.includes(':')) continue;
+        child.content = child.content.replace(
+          /:([a-z0-9_+-]+):/g,
+          (whole, name: string) => EMOJI_MAP[name] ?? whole,
+        );
       }
     }
   });
@@ -441,6 +826,11 @@ const EMBED_SERVICES: EmbedService[] = [
     name: 'X (Twitter)',
     icon: '𝕏',
     pattern: /^https?:\/\/(?:twitter\.com|x\.com)\/[^/]+\/status\/\d+/,
+  },
+  {
+    name: 'GitHub',
+    icon: '🐙',
+    pattern: /^https?:\/\/github\.com\/[^/]+\/[^/]+\/blob\//,
   },
   {
     name: 'GitHub Gist',
@@ -512,6 +902,7 @@ const EMBED_SERVICES: EmbedService[] = [
 function embedPlugin(md: MarkdownIt) {
   // コアルール: 段落内がURLのみの場合、埋め込みカードに変換する
   md.core.ruler.after('inline', 'qiita_embed', (state) => {
+    if (!isQiita(state.env)) return;
     const tokens = state.tokens;
     const newTokens: typeof tokens = [];
 

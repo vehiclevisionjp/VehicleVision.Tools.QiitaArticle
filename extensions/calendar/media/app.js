@@ -1,6 +1,33 @@
 // === VS Code Webview API ブリッジ ===
 const vscode = acquireVsCodeApi();
 const _pendingRequests = {};
+
+// === テーマ（設定 articleCalendar.theme: auto / light / dark） ===
+// auto は VS Code のテーマ（body の vscode-dark 等のクラス）に追従する
+let themeSetting = document.body.dataset.theme || 'auto';
+
+function isVsCodeDark() {
+  const c = document.body.classList;
+  return (
+    c.contains('vscode-dark') ||
+    (c.contains('vscode-high-contrast') &&
+      !c.contains('vscode-high-contrast-light'))
+  );
+}
+
+function applyTheme() {
+  const dark =
+    themeSetting === 'dark' || (themeSetting !== 'light' && isVsCodeDark());
+  document.body.classList.toggle('qiita-dark', dark);
+}
+
+applyTheme();
+// VS Code のテーマ切り替え（body クラスの変更）に追従
+new MutationObserver(applyTheme).observe(document.body, {
+  attributes: true,
+  attributeFilter: ['class'],
+});
+
 let _requestId = 0;
 
 function apiRequest(command, params) {
@@ -23,6 +50,20 @@ window.addEventListener('message', (event) => {
     } else {
       resolve(msg.data);
     }
+  }
+  // 表示テーマの設定が変わったら反映する
+  if (msg.type === 'themeChanged') {
+    themeSetting = msg.theme || 'auto';
+    applyTheme();
+  }
+  // 祝日の取得元設定が変わったら祝日を取得し直す
+  if (msg.type === 'holidaysChanged') {
+    holidays = {};
+    holidayErrors = [];
+    (async function () {
+      await fetchHolidaysForCalendar();
+      render();
+    })();
   }
   // ファイル変更検知による自動リロード
   if (msg.type === 'fileChanged') {
@@ -51,7 +92,7 @@ function getArticlePath(slug) {
 }
 
 function openInEditor(slug) {
-  apiRequest('openFile', { path: getArticlePath(slug) });
+  apiRequest('openFile', { slug: slug, path: getArticlePath(slug) });
 }
 
 // === 状態 ===
@@ -61,6 +102,7 @@ let allArticles = [];
 let holidays = {};
 let holidayErrors = [];
 let currentBranch = null;
+let defaultBranch = 'main';
 let isMainBranch = false;
 let hasUncommitted = false;
 let branchFiles = [];
@@ -138,7 +180,8 @@ async function fetchCurrentBranch() {
     const data = await apiRequest('getGitBranch');
     if (data.success) {
       currentBranch = data.branch;
-      isMainBranch = data.branch === 'main' || data.branch === 'master';
+      defaultBranch = data.defaultBranch || 'main';
+      isMainBranch = !!data.isDefault;
     } else {
       currentBranch = null;
       isMainBranch = false;
@@ -190,7 +233,9 @@ function renderBranchBanner() {
     banner.innerHTML =
       '現在のブランチは <strong>' +
       escapeHtml(currentBranch) +
-      '</strong> です。記事の追加は main ブランチでのみ可能です。' +
+      '</strong> です。記事の追加は ' +
+      escapeHtml(defaultBranch) +
+      ' ブランチでのみ可能です。' +
       '<div class="branch-actions">' +
       commitBtn +
       mergeBtn +
@@ -198,7 +243,8 @@ function renderBranchBanner() {
     banner.style.display = 'flex';
     if (newArticleBtn) {
       newArticleBtn.disabled = true;
-      newArticleBtn.title = 'main ブランチ以外では記事を追加できません';
+      newArticleBtn.title =
+        defaultBranch + ' ブランチ以外では記事を追加できません';
     }
   } else if (isMainBranch && hasUncommitted) {
     banner.innerHTML =
@@ -1071,13 +1117,13 @@ function renderYearlyChart() {
       (W - padR) +
       '" y2="' +
       gy +
-      '" stroke="#c9cdd4" stroke-width="1"/>';
+      '" class="c-grid" stroke-width="1"/>';
     gridLines +=
       '<text x="' +
       (padL - 6) +
       '" y="' +
       (gy + 4) +
-      '" text-anchor="end" fill="#555b6e" font-size="11">' +
+      '" text-anchor="end" class="c-axis" font-size="11">' +
       val +
       '</text>';
   }
@@ -1096,7 +1142,7 @@ function renderYearlyChart() {
         cx +
         '" y="' +
         (H - 14) +
-        '" text-anchor="middle" fill="#555b6e" font-size="9" style="' +
+        '" text-anchor="middle" class="c-axis" font-size="9" style="' +
         weight +
         '">' +
         wm.year +
@@ -1106,7 +1152,7 @@ function renderYearlyChart() {
         cx +
         '" y="' +
         (H - 4) +
-        '" text-anchor="middle" fill="#555b6e" font-size="11" style="' +
+        '" text-anchor="middle" class="c-axis" font-size="11" style="' +
         weight +
         '">' +
         wm.label +
@@ -1117,7 +1163,7 @@ function renderYearlyChart() {
         cx +
         '" y="' +
         (H - 6) +
-        '" text-anchor="middle" fill="#555b6e" font-size="11" style="' +
+        '" text-anchor="middle" class="c-axis" font-size="11" style="' +
         weight +
         '">' +
         wm.label +
@@ -1125,9 +1171,9 @@ function renderYearlyChart() {
     }
   }
 
-  var pubColor = '#0f7b3f',
-    schColor = '#0056d6',
-    prevColor = '#e85d04';
+  var pubColor = 'var(--published)',
+    schColor = 'var(--scheduled)',
+    prevColor = 'var(--scheduled-past)';
 
   // 積み上げ棒グラフ（今年）
   var bars = '';
@@ -1147,7 +1193,7 @@ function renderYearlyChart() {
         barW +
         '" height="' +
         pubH +
-        '" fill="' +
+        '" style="fill:' +
         pubColor +
         '" opacity="0.45" rx="2"/>';
     }
@@ -1164,7 +1210,7 @@ function renderYearlyChart() {
         barW +
         '" height="' +
         schH +
-        '" fill="' +
+        '" style="fill:' +
         schColor +
         '" opacity="0.45" rx="2"/>';
     }
@@ -1175,7 +1221,7 @@ function renderYearlyChart() {
         cx +
         '" y="' +
         (getY(currTotal[bi]) - 5) +
-        '" text-anchor="middle" fill="#333" font-size="10" font-weight="700">' +
+        '" text-anchor="middle" class="c-total" font-size="10" font-weight="700">' +
         currTotal[bi] +
         '</text>';
     }
@@ -1194,16 +1240,16 @@ function renderYearlyChart() {
       lx +
       '" cy="' +
       ly +
-      '" r="4.5" fill="' +
+      '" r="4.5" style="fill:' +
       prevColor +
-      '" stroke="#fff" stroke-width="2"/>';
+      ';stroke:var(--card)" stroke-width="2"/>';
     if (prevTotal[li] > 0) {
       prevLabels +=
         '<text x="' +
         lx +
         '" y="' +
         (ly - 9) +
-        '" text-anchor="middle" fill="' +
+        '" text-anchor="middle" style="fill:' +
         prevColor +
         '" font-size="9" font-weight="600">' +
         prevTotal[li] +
@@ -1218,13 +1264,13 @@ function renderYearlyChart() {
     if (currTotal[di] > 0 || prevTotal[di] > 0) {
       var color, label;
       if (diff > 0) {
-        color = '#0f7b3f';
+        color = 'var(--published)';
         label = '+' + diff;
       } else if (diff < 0) {
-        color = '#c9190b';
+        color = 'var(--holiday)';
         label = '' + diff;
       } else {
-        color = '#555b6e';
+        color = 'var(--text-muted)';
         label = '±0';
       }
       diffLabels +=
@@ -1232,7 +1278,7 @@ function renderYearlyChart() {
         getXCenter(di) +
         '" y="' +
         (H - 18) +
-        '" text-anchor="middle" fill="' +
+        '" text-anchor="middle" style="fill:' +
         color +
         '" font-size="9">' +
         label +
@@ -1265,7 +1311,7 @@ function renderYearlyChart() {
     bars +
     '<path d="' +
     linePath +
-    '" fill="none" stroke="' +
+    '" fill="none" style="stroke:' +
     prevColor +
     '" stroke-width="2.5" stroke-linejoin="round" stroke-dasharray="6 3"/>' +
     dots +
@@ -1581,7 +1627,9 @@ document.addEventListener('keydown', function (e) {
 // === 記事作成 ===
 async function openCreateModal(dateStr) {
   if (!isMainBranch) {
-    showNotification('⚠️ main ブランチ以外では記事を追加できません');
+    showNotification(
+      '⚠️ ' + defaultBranch + ' ブランチ以外では記事を追加できません',
+    );
     return;
   }
   document.getElementById('createTitle').value = '';
@@ -1673,13 +1721,18 @@ async function updateBranchInfo() {
   try {
     var data = await apiRequest('getGitBranch');
     if (data.success) {
-      var isMain = data.branch === 'main' || data.branch === 'master';
+      var isMain = !!data.isDefault;
+      var defBranch = data.defaultBranch || 'main';
       var icon = isMain
         ? '<i class="codicon codicon-check"></i>'
         : '<i class="codicon codicon-warning"></i>';
       var warn = isMain
         ? ''
-        : '（main 以外のブランチです。main に切り替えてから作成します）';
+        : '（' +
+          defBranch +
+          ' 以外のブランチです。' +
+          defBranch +
+          ' に切り替えてから作成します）';
       infoEl.innerHTML =
         icon +
         ' 現在のブランチ: <strong>' +

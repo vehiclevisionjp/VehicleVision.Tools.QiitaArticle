@@ -1,0 +1,261 @@
+// 通知・差分・確認モーダル・ツールバー・投稿ボタン
+
+// 通知
+
+.notification {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #0f7b3f;
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  z-index: 200;
+  opacity: 0;
+  transition:
+    opacity 0.3s,
+    transform 0.3s;
+  white-space: nowrap;
+
+  &.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  &.error {
+    background: #c62828;
+  }
+}
+
+// 差分チェック一括ボタン
+
+.btn-diff-all {
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  height: 36px;
+  padding: 0 14px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 36px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition:
+    background 0.15s,
+    transform 0.1s;
+
+  &:hover:not(:disabled) {
+    background: var(--hover);
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// 差分ありインジケーター（カレンダー上の記事カード）
+
+.article-item.has-diff {
+  position: relative;
+}
+
+.article-item .diff-icon {
+  color: var(--scheduled-past);
+  font-size: 0.75rem;
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
+// 差分セクション（詳細モーダル）
+
+.diff-section {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.diff-status {
+  font-size: 0.82rem;
+  padding: 6px 10px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  &.loading {
+    color: var(--text-muted);
+    background: #f0f2f5;
+  }
+
+  &.error {
+    color: #c9190b;
+    background: #ffd6d6;
+  }
+
+  &.has-diff {
+    color: var(--scheduled-past);
+    background: var(--scheduled-past-bg);
+  }
+
+  &.no-diff {
+    color: var(--published);
+    background: var(--published-bg);
+  }
+}
+
+.diff-view-btn {
+  margin-top: 4px;
+}
+
+// 実行確認モーダル
+
+.confirm-card {
+  max-width: 440px;
+
+  h3 {
+    font-size: 1.15rem;
+    margin-bottom: 12px;
+  }
+}
+
+.confirm-message {
+  font-size: 0.88rem;
+  color: var(--text);
+  line-height: 1.6;
+  padding: 12px;
+  background: #f0f2f5;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.btn-confirm-execute {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 6px;
+  background: var(--published);
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    transform 0.1s;
+
+  &:hover {
+    filter: brightness(0.9);
+    transform: scale(1.02);
+  }
+
+  &.danger {
+    background: var(--scheduled-past);
+  }
+
+  &.danger:hover {
+    filter: brightness(0.9);
+  }
+}
+
+// codicon-modifier-spin
+
+.codicon-modifier-spin {
+  animation: spin 1s linear infinite;
+}
+
+// Qiita CLI ツールバー
+
+.qiita-toolbar {
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  border-radius: 8px;
+  padding: 8px 16px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.qiita-toolbar-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--published);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.qiita-toolbar-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.btn-qiita {
+  padding: 5px 14px;
+  background: var(--published);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition:
+    background 0.2s,
+    opacity 0.2s;
+
+  &:hover {
+    background: #0a6b30;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &.secondary {
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  &.secondary:hover {
+    background: var(--hover);
+  }
+}
+
+// 投稿ボタン（詳細モーダル内）
+
+.btn-publish {
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: var(--published);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.15s;
+
+  &:hover {
+    background: #0a6b30;
+  }
+}

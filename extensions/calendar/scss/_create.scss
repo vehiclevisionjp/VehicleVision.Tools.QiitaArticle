@@ -1,0 +1,217 @@
+// 予約投稿作成ボタン・作成モーダル
+
+// 予約投稿作成ボタン（日付セル内）
+
+.add-article-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: var(--scheduled);
+  color: #fff;
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  z-index: 2;
+
+  .codicon {
+    font-size: 0.85rem;
+    margin-right: 0;
+  }
+}
+
+.day-cell:hover .add-article-btn {
+  opacity: 0.7;
+}
+
+.add-article-btn:hover {
+  opacity: 1 !important;
+  transform: scale(1.15);
+}
+
+.day-cell.other-month .add-article-btn {
+  display: none;
+}
+
+// 作成モーダル
+
+.create-card {
+  max-width: 460px;
+
+  h3 {
+    font-size: 1.15rem;
+    margin-bottom: 16px;
+  }
+}
+
+.create-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mode-selector {
+  display: flex;
+  gap: 8px;
+}
+
+.mode-option {
+  cursor: pointer;
+
+  input[type='radio'] {
+    display: none;
+  }
+}
+
+.mode-label {
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: 2px solid var(--border);
+  color: var(--text-muted);
+  background: var(--card);
+  transition: all 0.15s;
+}
+
+.mode-option input[type='radio']:checked + .mode-label.published {
+  background: var(--published-bg);
+  color: var(--published);
+  border-color: var(--published);
+}
+
+.mode-option input[type='radio']:checked + .mode-label.private {
+  background: var(--private-bg);
+  color: var(--private);
+  border-color: var(--private);
+}
+
+.mode-option input[type='radio']:checked + .mode-label.scheduled {
+  background: var(--scheduled-bg);
+  color: var(--scheduled);
+  border-color: var(--scheduled);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  input {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: var(--text);
+    background: var(--card);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  input:focus {
+    border-color: var(--scheduled);
+    box-shadow: 0 0 0 3px rgba(0, 86, 214, 0.25);
+  }
+
+  input[readonly] {
+    background: #e0e3e8;
+    cursor: default;
+  }
+}
+
+.form-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.form-preview {
+  font-size: 0.82rem;
+  background: #e8eaed;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: var(--text);
+  word-break: break-all;
+}
+
+.form-error {
+  font-size: 0.82rem;
+  color: #c9190b;
+  background: #ffd6d6;
+  border: 1px solid #f09898;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.form-group-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+
+  input[type='checkbox'] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--scheduled);
+    cursor: pointer;
+  }
+
+  code {
+    font-size: 0.8rem;
+    background: #ced4da;
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+}
+
+.branch-info {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  padding: 4px 0;
+
+  &.branch-warn {
+    color: var(--scheduled-past);
+  }
+}
+
+.btn-create {
+  background: var(--scheduled) !important;
+  color: #fff !important;
+  border-color: var(--scheduled) !important;
+  font-weight: 600;
+
+  &:hover {
+    background: #0047b3 !important;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed !important;
+  }
+}

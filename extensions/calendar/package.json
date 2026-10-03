@@ -36,22 +36,51 @@
           "type": "boolean",
           "default": true,
           "description": "ワークスペースを開いたときに自動的にカレンダーを表示する"
+        },
+        "articleCalendar.theme": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "light",
+            "dark"
+          ],
+          "enumDescriptions": [
+            "VS Code のテーマに合わせる",
+            "常にライト",
+            "常にダーク"
+          ],
+          "default": "auto",
+          "scope": "resource",
+          "description": "カレンダーの配色。auto は VS Code のテーマ（ライト / ダーク / ハイコントラスト）に追従します。"
+        },
+        "articleCalendar.holidayCalendarId": {
+          "type": "string",
+          "default": "ja.japanese.official#holiday@group.v.calendar.google.com",
+          "scope": "resource",
+          "markdownDescription": "祝日の取得元となる Google カレンダーの ID、または公開 ICS の URL。既定は日本の祝日（`ja.japanese.official#holiday@group.v.calendar.google.com`）。他国の祝日などに変更できます（例: `en.usa#holiday@group.v.calendar.google.com`）。空にすると holidays-jp の API（日本の祝日）を使用します。カレンダーは公開されている必要があります。"
         }
       }
     }
   },
   "scripts": {
-    "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
-    "watch": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap --watch",
-    "package": "npx @vscode/vsce package --no-dependencies",
-    "test": "vitest run --reporter=verbose"
+    "build": "run-s build:css build:js",
+    "build:css": "sass --no-charset --no-source-map --style=expanded scss/style.scss media/style.css",
+    "build:js": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
+    "watch": "run-p watch:css watch:js",
+    "watch:css": "sass --no-charset --no-source-map --style=expanded --watch scss/style.scss media/style.css",
+    "watch:js": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap --watch",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.test.json",
+    "package": "npx @vscode/vsce package --no-dependencies"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "@types/vscode": "^1.85.0",
-    "@vscode/codicons": "^0.0.44",
-    "esbuild": "^0.24.0",
-    "typescript": "^5.3.0",
-    "vitest": "^3.1.1"
+    "@types/node": "^24.0.0",
+    "@types/vscode": "~1.85.0",
+    "@vscode/codicons": "^0.0.46-24",
+    "esbuild": "^0.28.2",
+    "npm-run-all2": "^9.0.3",
+    "sass": "^1.105.1",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
   }
 }

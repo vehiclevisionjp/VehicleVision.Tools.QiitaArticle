@@ -23,3 +23,7 @@ extensions/**/obj/
 extensions/**/dist/
 extensions/**/node_modules/
 extensions/**/package-lock.json
+
+# Extensions: SCSS のビルド成果物（scss/ から生成）
+extensions/calendar/media/style.css
+extensions/markdown-preview/media/qiita-markdown.css

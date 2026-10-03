@@ -33,6 +33,7 @@ jobs:
         working-directory: extensions/calendar
         run: |
           npm install
+          npm run typecheck
           npm run build
 
       # ── Calendar 拡張のテスト ──────────────────────────────
@@ -45,6 +46,7 @@ jobs:
         working-directory: extensions/markdown-preview
         run: |
           npm install
+          npm run typecheck
           npm run build
 
       # ── MarkdownPreview 拡張のテスト ──────────────────────

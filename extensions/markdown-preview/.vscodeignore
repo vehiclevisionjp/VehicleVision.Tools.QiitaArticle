@@ -4,3 +4,6 @@ tsconfig.json
 node_modules/**
 **/*.map
 **/*.ts
+test/**
+vitest.config.ts
+scss/**

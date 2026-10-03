@@ -1,0 +1,83 @@
+// 年間チャート・レスポンシブ
+
+// 年間チャート
+
+.yearly-section {
+  margin-top: 32px;
+
+  h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+}
+
+.yearly-chart {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 16px 8px;
+
+  svg {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 5 / 1;
+    overflow: visible;
+  }
+}
+
+.yearly-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.yearly-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.yearly-legend-swatch {
+  width: 14px;
+  height: 10px;
+  border-radius: 2px;
+
+  &.bar {
+    height: 10px;
+  }
+
+  &.line {
+    height: 3px;
+    border-radius: 2px;
+    position: relative;
+  }
+
+  &.bar.published {
+    background: var(--published);
+    opacity: 0.45;
+  }
+
+  &.bar.scheduled {
+    background: var(--scheduled);
+    opacity: 0.45;
+  }
+
+  &.line.published-prev {
+    background: var(--scheduled-past);
+  }
+}
+
+// レスポンシブ
+
+@media (max-width: 768px) {
+  .day-cell {
+    min-height: 60px;
+  }
+  .article-item {
+    font-size: 0.65rem;
+    padding: 2px 4px;
+  }
+}

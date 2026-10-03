@@ -1,0 +1,217 @@
+// 詳細モーダル・トグル・日付変更
+
+// ツールチップ (モーダル)
+
+.tooltip-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  justify-content: center;
+  align-items: center;
+
+  &.active {
+    display: flex;
+  }
+}
+
+.tooltip-card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+
+  h3 {
+    font-size: 1.1rem;
+    margin-bottom: 12px;
+    line-height: 1.4;
+  }
+
+  .meta {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.8;
+  }
+
+  .meta strong {
+    color: var(--text);
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .badge.published {
+    background: var(--published);
+  }
+
+  .badge.private {
+    background: var(--private);
+  }
+
+  .badge.scheduled {
+    background: var(--scheduled);
+  }
+
+  .badge.scheduledpast {
+    background: var(--scheduled-past);
+  }
+
+  .badge.draft {
+    background: var(--draft);
+  }
+
+  .badge.ready {
+    background: var(--ready);
+  }
+
+  .tag {
+    display: inline-block;
+    background: #ced4da;
+    color: var(--text-muted);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    margin: 2px;
+  }
+
+  .actions {
+    margin-top: 16px;
+    display: flex;
+    gap: 8px;
+  }
+}
+
+.tooltip-card .actions a,
+.tooltip-card .actions button {
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  transition: background 0.15s;
+}
+
+.tooltip-card .actions a:hover,
+.tooltip-card .actions button:hover {
+  background: var(--hover);
+}
+
+.tooltip-card .actions a.primary {
+  background: #3da600;
+  color: #fff;
+  border-color: #3da600;
+}
+
+// トグルボタン
+
+.toggle-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-toggle {
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-toggle:hover,
+.btn-date-unset:hover {
+  background: var(--hover);
+  border-color: var(--text-muted);
+}
+
+// 日付変更セクション（モーダル内）
+
+.date-change-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+
+  label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 6px;
+  }
+}
+
+.date-change-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+
+  input[type='date'] {
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    background: var(--card);
+    color: var(--text);
+    flex: 1;
+    min-width: 130px;
+  }
+}
+
+.btn-date-set {
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  border: 1px solid var(--scheduled);
+  background: var(--scheduled-bg);
+  color: var(--text);
+  transition: opacity 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
+.btn-date-unset {
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text-muted);
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
