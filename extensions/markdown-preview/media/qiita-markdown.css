@@ -5,15 +5,173 @@
  * ===================================================================== */
 
 /* ---------------------------------------------------------------------
+ * 基本要素（Qiita の見た目に寄せる）
+ * --------------------------------------------------------------------- */
+
+.markdown-body,
+body {
+  line-height: 1.8;
+  word-wrap: break-word;
+}
+
+/* 見出し: h1 / h2 は下線、h3 以降は太字のみ */
+h1,
+h2 {
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.35);
+  font-weight: 700;
+}
+
+h1 {
+  font-size: 1.75em;
+}
+
+h2 {
+  font-size: 1.5em;
+}
+
+h3 {
+  font-size: 1.25em;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin-top: 1.8em;
+  margin-bottom: 0.8em;
+  line-height: 1.4;
+}
+
+/* インラインコード */
+:not(pre) > code {
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  background-color: rgba(128, 128, 128, 0.16);
+  font-size: 0.9em;
+}
+
+/* 引用 */
+blockquote {
+  margin: 16px 0;
+  padding: 4px 16px;
+  border-left: 4px solid rgba(128, 128, 128, 0.4);
+  background: transparent;
+  color: inherit;
+  opacity: 0.85;
+}
+
+blockquote > :first-child {
+  margin-top: 0;
+}
+
+blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+/* テーブル */
+table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow: auto;
+  margin: 16px 0;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+th,
+td {
+  padding: 6px 13px;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+}
+
+th {
+  font-weight: 700;
+  background-color: rgba(128, 128, 128, 0.12);
+}
+
+tr:nth-child(2n) td {
+  background-color: rgba(128, 128, 128, 0.05);
+}
+
+/* 画像 */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* キーボード */
+kbd {
+  display: inline-block;
+  padding: 2px 6px;
+  border: 1px solid rgba(128, 128, 128, 0.5);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background-color: rgba(128, 128, 128, 0.1);
+  font-size: 0.85em;
+  line-height: 1.2;
+}
+
+/* 水平線 */
+hr {
+  height: 0;
+  margin: 24px 0;
+  border: none;
+  border-top: 1px solid rgba(128, 128, 128, 0.35);
+}
+
+/* 取り消し線 */
+del,
+s {
+  opacity: 0.7;
+}
+
+/* ---------------------------------------------------------------------
+ * タスクリスト
+ * --------------------------------------------------------------------- */
+
+ul.qiita-task-list {
+  padding-left: 1.2em;
+  list-style: none;
+}
+
+.qiita-task-list-item {
+  margin: 4px 0;
+}
+
+.qiita-task-checkbox {
+  margin: 0 0.4em 0.2em 0;
+  vertical-align: middle;
+}
+
+/* ---------------------------------------------------------------------
+ * インライン数式（KaTeX 無効時のフォールバック）
+ * --------------------------------------------------------------------- */
+
+.qiita-math-inline {
+  font-family: "KaTeX_Main", "Times New Roman", serif;
+  font-style: italic;
+}
+
+/* ---------------------------------------------------------------------
  * :::note ブロック
+ * Qiita と同様に、淡い背景 + 左上アイコンの角丸ボックスで表示する。
  * --------------------------------------------------------------------- */
 
 .qiita-note {
+  --qiita-note-color: #0f81c4;
+  --qiita-note-bg: rgba(15, 129, 196, 0.1);
+  position: relative;
   display: flex;
-  gap: 8px;
+  gap: 12px;
   padding: 16px 20px;
-  margin: 16px 0;
-  border-radius: 6px;
+  margin: 20px 0;
+  border: 1px solid var(--qiita-note-color);
+  border-radius: 8px;
+  background-color: var(--qiita-note-bg);
   line-height: 1.7;
 }
 
@@ -30,116 +188,122 @@
   margin-bottom: 0;
 }
 
-/* info (デフォルト) */
-.qiita-note-info {
-  background-color: rgba(0, 122, 204, 0.08);
-  border-left: 4px solid #007acc;
-}
-
-/* warn */
 .qiita-note-warn {
-  background-color: rgba(206, 145, 0, 0.08);
-  border-left: 4px solid #ce9100;
+  --qiita-note-color: #c8920a;
+  --qiita-note-bg: rgba(230, 170, 20, 0.12);
 }
 
-/* alert */
 .qiita-note-alert {
-  background-color: rgba(220, 53, 69, 0.08);
-  border-left: 4px solid #dc3545;
+  --qiita-note-color: #d9374f;
+  --qiita-note-bg: rgba(217, 55, 79, 0.1);
 }
 
-/* アイコン */
-.qiita-note-icon-info::before,
-.qiita-note-icon-warn::before,
-.qiita-note-icon-alert::before {
-  display: inline-block;
-  font-size: 18px;
-  line-height: 1.5;
+/* アイコン（丸囲み） */
+.qiita-note-icon-info,
+.qiita-note-icon-warn,
+.qiita-note-icon-alert {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
   margin-top: 1px;
+  border-radius: 50%;
+  background-color: var(--qiita-note-color);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .qiita-note-icon-info::before {
-  content: "ℹ";
-  color: #007acc;
+  content: "i";
+  font-family: serif;
+  font-style: italic;
 }
 
-.qiita-note-icon-warn::before {
-  content: "⚠";
-  color: #ce9100;
-}
-
+.qiita-note-icon-warn::before,
 .qiita-note-icon-alert::before {
-  content: "⛔";
-  color: #dc3545;
+  content: "!";
 }
 
 /* ダークテーマ対応 */
 .vscode-dark .qiita-note-info,
-.vscode-high-contrast .qiita-note-info {
-  background-color: rgba(55, 148, 255, 0.1);
-  border-left-color: #3794ff;
-}
-
-.vscode-dark .qiita-note-icon-info::before,
-.vscode-high-contrast .qiita-note-icon-info::before {
-  color: #3794ff;
+.vscode-high-contrast:not(.vscode-high-contrast-light) .qiita-note-info {
+  --qiita-note-color: #3794ff;
+  --qiita-note-bg: rgba(55, 148, 255, 0.12);
 }
 
 .vscode-dark .qiita-note-warn,
-.vscode-high-contrast .qiita-note-warn {
-  background-color: rgba(227, 175, 47, 0.1);
-  border-left-color: #e3af2f;
-}
-
-.vscode-dark .qiita-note-icon-warn::before,
-.vscode-high-contrast .qiita-note-icon-warn::before {
-  color: #e3af2f;
+.vscode-high-contrast:not(.vscode-high-contrast-light) .qiita-note-warn {
+  --qiita-note-color: #e3af2f;
+  --qiita-note-bg: rgba(227, 175, 47, 0.12);
 }
 
 .vscode-dark .qiita-note-alert,
-.vscode-high-contrast .qiita-note-alert {
-  background-color: rgba(240, 80, 80, 0.1);
-  border-left-color: #f05050;
+.vscode-high-contrast:not(.vscode-high-contrast-light) .qiita-note-alert {
+  --qiita-note-color: #f05050;
+  --qiita-note-bg: rgba(240, 80, 80, 0.12);
 }
 
-.vscode-dark .qiita-note-icon-alert::before,
-.vscode-high-contrast .qiita-note-icon-alert::before {
-  color: #f05050;
+.vscode-dark .qiita-note-icon-info,
+.vscode-dark .qiita-note-icon-warn,
+.vscode-dark .qiita-note-icon-alert {
+  color: #1e1e1e;
 }
 
 /* ---------------------------------------------------------------------
- * コードブロック lang:filename
+ * コードブロック lang:filename / diff_lang
+ * Qiita と同様、ファイル名をコードブロック上部のタブとして表示する。
  * --------------------------------------------------------------------- */
 
 .qiita-code-frame {
   margin: 16px 0;
   border-radius: 6px;
   overflow: hidden;
+  border: 1px solid rgba(128, 128, 128, 0.3);
 }
 
 .qiita-code-filename {
-  padding: 6px 12px;
-  font-size: 0.85em;
+  padding: 4px 12px;
+  font-size: 0.82em;
   font-weight: 600;
   font-family: var(--vscode-editor-font-family, "Consolas", "Courier New", monospace);
-  border-bottom: 1px solid rgba(128, 128, 128, 0.2);
-}
-
-/* ライトテーマ */
-.qiita-code-filename {
-  background-color: #e8e8e8;
+  background-color: #e4e4e4;
   color: #333;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.3);
 }
 
 .vscode-dark .qiita-code-filename,
-.vscode-high-contrast .qiita-code-filename {
-  background-color: #2d2d2d;
-  color: #ccc;
+.vscode-high-contrast:not(.vscode-high-contrast-light) .qiita-code-filename {
+  background-color: #333;
+  color: #ddd;
 }
 
 .qiita-code-frame pre {
   margin: 0 !important;
+  border: none !important;
   border-radius: 0 !important;
+}
+
+/* diff_言語 */
+pre.qiita-diff {
+  overflow: auto;
+}
+
+.qiita-diff-line {
+  display: block;
+  margin: 0 -16px;
+  padding: 0 16px;
+}
+
+.qiita-diff-add {
+  background-color: rgba(46, 160, 67, 0.2);
+}
+
+.qiita-diff-del {
+  background-color: rgba(248, 81, 73, 0.2);
 }
 
 /* ---------------------------------------------------------------------
@@ -200,7 +364,7 @@ details > summary:hover {
 }
 
 .vscode-dark details > summary:hover,
-.vscode-high-contrast details > summary:hover {
+.vscode-high-contrast:not(.vscode-high-contrast-light) details > summary:hover {
   color: #3794ff;
 }
 
@@ -258,12 +422,12 @@ details > *:last-child {
 }
 
 .vscode-dark .qiita-footnote-ref a,
-.vscode-high-contrast .qiita-footnote-ref a {
+.vscode-high-contrast:not(.vscode-high-contrast-light) .qiita-footnote-ref a {
   color: #3794ff;
 }
 
 .vscode-dark .qiita-footnote-backref,
-.vscode-high-contrast .qiita-footnote-backref {
+.vscode-high-contrast:not(.vscode-high-contrast-light) .qiita-footnote-backref {
   color: #3794ff;
 }
 
@@ -314,7 +478,7 @@ details > *:last-child {
 }
 
 .vscode-dark .qiita-embed-url,
-.vscode-high-contrast .qiita-embed-url {
+.vscode-high-contrast:not(.vscode-high-contrast-light) .qiita-embed-url {
   color: #3794ff;
 }
 
