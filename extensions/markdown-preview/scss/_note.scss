@@ -1,0 +1,97 @@
+@use "themes" as *;
+
+// :::note ブロック
+// Qiita と同様に、淡い背景 + 左上アイコンの角丸ボックスで表示する。
+
+.qiita-note {
+  --qiita-note-color: #0f81c4;
+  --qiita-note-bg: rgba(15, 129, 196, 0.1);
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px;
+  margin: 20px 0;
+  border: 1px solid var(--qiita-note-color);
+  border-radius: 8px;
+  background-color: var(--qiita-note-bg);
+  line-height: 1.7;
+}
+
+.qiita-note-content {
+  flex: 1;
+  min-width: 0;
+
+  > *:first-child {
+    margin-top: 0;
+  }
+
+  > *:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.qiita-note-warn {
+  --qiita-note-color: #c8920a;
+  --qiita-note-bg: rgba(230, 170, 20, 0.12);
+}
+
+.qiita-note-alert {
+  --qiita-note-color: #d9374f;
+  --qiita-note-bg: rgba(217, 55, 79, 0.1);
+}
+
+// アイコン（丸囲み）
+
+.qiita-note-icon-info,
+.qiita-note-icon-warn,
+.qiita-note-icon-alert {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background-color: var(--qiita-note-color);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.qiita-note-icon-info::before {
+  content: "i";
+  font-family: serif;
+  font-style: italic;
+}
+
+.qiita-note-icon-warn::before,
+.qiita-note-icon-alert::before {
+  content: "!";
+}
+
+// ダークテーマ対応
+
+@include dark-root {
+  .qiita-note-info {
+    --qiita-note-color: #3794ff;
+    --qiita-note-bg: rgba(55, 148, 255, 0.12);
+  }
+
+  .qiita-note-warn {
+    --qiita-note-color: #e3af2f;
+    --qiita-note-bg: rgba(227, 175, 47, 0.12);
+  }
+
+  .qiita-note-alert {
+    --qiita-note-color: #f05050;
+    --qiita-note-bg: rgba(240, 80, 80, 0.12);
+  }
+}
+
+.vscode-dark .qiita-note-icon-info,
+.vscode-dark .qiita-note-icon-warn,
+.vscode-dark .qiita-note-icon-alert {
+  color: #1e1e1e;
+}

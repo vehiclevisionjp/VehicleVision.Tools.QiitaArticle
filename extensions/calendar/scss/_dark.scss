@@ -1,0 +1,87 @@
+// ダークテーマ: 明色固定だった面の上書き
+
+@use "themes" as *;
+
+@include dark-root {
+  .sidebar-header,
+  .day-header,
+  .tooltip-card .tag,
+  .form-group input[readonly],
+  .checkbox-label code {
+    background: #33373d;
+    color: var(--text);
+  }
+
+  .day-header.week-num-header {
+    background: #2b2f34;
+  }
+
+  .day-cell.other-month,
+  .week-num-cell,
+  .commit-file-list,
+  .diff-status.loading,
+  .confirm-message {
+    background: #2a2d31;
+  }
+
+  .day-cell.saturday {
+    background: #1f2c45;
+  }
+
+  .day-cell.saturday .day-number {
+    color: #78a9ff;
+  }
+
+  .day-cell.sunday {
+    background: #4a2a2c;
+  }
+
+  .day-cell.sunday .day-number {
+    color: #ff8d80;
+  }
+
+  .day-header.day-header-sat {
+    color: #78a9ff;
+  }
+
+  .day-header.day-header-sun {
+    color: #ff8d80;
+  }
+
+  .error-banner {
+    background: #4d3d12;
+    border-color: #d9a21b;
+    color: #ffd98a;
+  }
+
+  .branch-banner {
+    background: #4a2527;
+    border-color: #b85a5f;
+    color: #ffb3b6;
+  }
+
+  .branch-banner.main-uncommitted {
+    background: #1c3a57;
+    border-color: #4a8fcf;
+    color: #9ccbff;
+  }
+
+  .form-preview {
+    background: #2a2d31;
+  }
+
+  .form-error {
+    background: #4a2527;
+    border-color: #b85a5f;
+    color: #ffb3b6;
+  }
+
+  .qiita-toolbar {
+    background: #1f3a2a;
+    border-color: #3f7a55;
+  }
+
+  .tooltip-overlay {
+    background: rgba(0, 0, 0, 0.6);
+  }
+}

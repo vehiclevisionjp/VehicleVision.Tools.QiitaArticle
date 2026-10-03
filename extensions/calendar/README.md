@@ -47,9 +47,23 @@ Qiita: 記事カレンダーを開く
 | `←` / `→` キー   | 1 週間ずつ前後に移動         |
 | `Escape` キー    | 開いているモーダルを閉じる   |
 
+## 配色（ライト / ダーク）
+
+既定（`auto`）では VS Code のテーマ（ライト / ダーク / ハイコントラスト）に追従します。設定 `articleCalendar.theme` で `light` / `dark` に固定できます。
+
+```json
+"articleCalendar.theme": "dark"
+```
+
 ## 祝日の自動取得
 
-カレンダーの表示範囲に含まれる年の日本の祝日を外部 API から自動取得し、該当日にラベルを表示します。
+カレンダーの表示範囲に含まれる年の祝日を Google カレンダー（既定: 日本の祝日）から自動取得し、該当日にラベルを表示します。
+
+- 取得元は設定 `articleCalendar.holidayCalendarId` で変更できます（Google カレンダー ID または公開 ICS の URL。ワークスペースフォルダごとに設定可能）
+  - 既定: `ja.japanese.official#holiday@group.v.calendar.google.com`
+  - 例（米国）: `en.usa#holiday@group.v.calendar.google.com`
+  - 空にすると従来どおり holidays-jp の API を使用します
+- カレンダーは公開されている必要があります
 
 - 初回取得時にインターネット接続が必要です（取得後はキャッシュで動作）
 - 取得に失敗した場合、カレンダー上部にエラーバナーを表示します（カレンダー自体は引き続き利用可能）

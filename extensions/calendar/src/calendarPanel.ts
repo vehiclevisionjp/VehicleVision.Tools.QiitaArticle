@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { ArticleParser, ArticleInfo, UNDATED_PREFIX } from './articleParser';
-import { HolidayService } from './holidayService';
+import { DEFAULT_HOLIDAY_CALENDAR_ID, HolidayService } from './holidayService';
 import { GitService } from './gitService';
 import { removeField, setField } from './frontMatter';
 
@@ -112,7 +112,9 @@ export class CalendarPanel {
     this._publicDir = path.join(workspaceRoot, 'public');
 
     this._articleParser = new ArticleParser(this._publicDir);
-    this._holidayService = new HolidayService();
+    this._holidayService = new HolidayService(() =>
+      vscode.workspace.getConfiguration('articleCalendar', folder.uri).get<string>('holidayCalendarId', DEFAULT_HOLIDAY_CALENDAR_ID),
+    );
     this._gitService = new GitService(workspaceRoot);
 
     this._panel.webview.html = this._getHtmlForWebview(title);
@@ -158,6 +160,18 @@ export class CalendarPanel {
       gitHeadWatcher.onDidCreate(() => notify(300));
       this._disposables.push(gitHeadWatcher);
     });
+
+    // 設定変更（祝日の取得元・表示テーマ）を反映する
+    this._disposables.push(
+      vscode.workspace.onDidChangeConfiguration((e) => {
+        if (e.affectsConfiguration('articleCalendar.theme', folder.uri) && !this._disposed) {
+          this._panel.webview.postMessage({ type: 'themeChanged', theme: this._getTheme() });
+        }
+        if (e.affectsConfiguration('articleCalendar.holidayCalendarId', folder.uri) && !this._disposed) {
+          this._panel.webview.postMessage({ type: 'holidaysChanged' });
+        }
+      }),
+    );
 
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
   }
@@ -594,6 +608,12 @@ export class CalendarPanel {
     return path.join(this._publicDir, `${slug}.md`);
   }
 
+  /** 設定 articleCalendar.theme（auto / light / dark）。不正な値は auto */
+  private _getTheme(): 'auto' | 'light' | 'dark' {
+    const v = vscode.workspace.getConfiguration('articleCalendar', vscode.Uri.file(this._workspaceRoot)).get<string>('theme', 'auto');
+    return v === 'light' || v === 'dark' ? v : 'auto';
+  }
+
   // === HTML 生成 ===
 
   private _getHtmlForWebview(title: string): string {
@@ -619,7 +639,7 @@ export class CalendarPanel {
   <link rel="stylesheet" href="${styleUri}">
   <title>${title}</title>
 </head>
-<body>
+<body data-theme="${this._getTheme()}">
   <div class="container">
     <!-- ヘッダー -->
     <div class="header">

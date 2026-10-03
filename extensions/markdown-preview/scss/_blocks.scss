@@ -1,0 +1,88 @@
+@use "themes" as *;
+
+// 折りたたみ（details / summary）
+
+details {
+  margin: 16px 0;
+  padding: 0 16px;
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  border-radius: 6px;
+
+  > summary {
+    padding: 12px 0;
+    font-weight: 600;
+    cursor: pointer;
+    list-style: revert;
+  }
+
+  > summary:hover {
+    color: #007acc;
+  }
+}
+
+@include dark-root {
+  details > summary:hover {
+    color: #3794ff;
+  }
+}
+
+details[open] > summary {
+  margin-bottom: 0;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+  padding-bottom: 12px;
+}
+
+details > *:last-child {
+  margin-bottom: 16px;
+}
+
+// 脚注 (footnotes)
+
+.qiita-footnotes-sep {
+  margin-top: 32px;
+  border: none;
+  border-top: 1px solid rgba(128, 128, 128, 0.3);
+}
+
+.qiita-footnotes-list {
+  padding-left: 24px;
+  font-size: 0.9em;
+  color: inherit;
+}
+
+.qiita-footnote-item {
+  margin: 4px 0;
+  line-height: 1.6;
+
+  p {
+    margin: 0;
+  }
+}
+
+.qiita-footnote-ref a {
+  text-decoration: none;
+  color: #007acc;
+  font-weight: 600;
+  padding: 0 2px;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.qiita-footnote-backref {
+  text-decoration: none;
+  color: #007acc;
+  font-size: 0.85em;
+  margin-left: 4px;
+}
+
+@include dark-root {
+  .qiita-footnote-ref a {
+    color: #3794ff;
+  }
+
+  .qiita-footnote-backref {
+    color: #3794ff;
+  }
+}

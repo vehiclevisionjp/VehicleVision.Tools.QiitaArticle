@@ -1,0 +1,85 @@
+@use "themes" as *;
+
+// コードブロック lang:filename / diff_lang
+// Qiita と同様、ファイル名をコードブロック上部のタブとして表示する。
+
+.qiita-code-frame {
+  margin: 16px 0;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(128, 128, 128, 0.3);
+}
+
+.qiita-code-filename {
+  padding: 4px 12px;
+  font-size: 0.82em;
+  font-weight: 600;
+  font-family: var(--vscode-editor-font-family, "Consolas", "Courier New", monospace);
+  background-color: #e4e4e4;
+  color: #333;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.3);
+}
+
+@include dark-root {
+  .qiita-code-filename {
+    background-color: #333;
+    color: #ddd;
+  }
+}
+
+.qiita-code-frame pre {
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+// diff_言語
+
+pre.qiita-diff {
+  overflow: auto;
+}
+
+.qiita-diff-line {
+  display: block;
+  margin: 0 -16px;
+  padding: 0 16px;
+}
+
+.qiita-diff-add {
+  background-color: rgba(46, 160, 67, 0.2);
+}
+
+.qiita-diff-del {
+  background-color: rgba(248, 81, 73, 0.2);
+}
+
+// インラインカラーコード
+
+.qiita-inline-color {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-left: 4px;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  border-radius: 2px;
+  vertical-align: middle;
+}
+
+// ```math 数式ブロック（KaTeX 無効時のフォールバック）
+
+.qiita-math-block {
+  margin: 16px 0;
+  text-align: center;
+}
+
+.qiita-math-fallback {
+  display: inline-block;
+  padding: 12px 24px;
+  font-family: "KaTeX_Main", "Times New Roman", serif;
+  font-size: 1.1em;
+  text-align: center;
+  background-color: rgba(128, 128, 128, 0.05);
+  border: 1px dashed rgba(128, 128, 128, 0.3);
+  border-radius: 4px;
+  white-space: pre-wrap;
+}

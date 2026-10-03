@@ -1,0 +1,236 @@
+// ドラッグ＆ドロップ・ブランチ表示・バナー・コミットモーダル
+
+// ドラッグ＆ドロップ
+
+.article-item.draggable {
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.article-item.dragging {
+  opacity: 0.4;
+}
+
+.day-cell.drop-target {
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 86, 214, 0.04);
+    pointer-events: none;
+    z-index: 1;
+  }
+}
+
+.day-cell.drag-over {
+  box-shadow: inset 0 0 0 2px var(--scheduled);
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 86, 214, 0.12);
+    pointer-events: none;
+    z-index: 1;
+  }
+}
+
+// ブランチ追加記事のマーカー
+
+.article-item.branch-file {
+  position: relative;
+  box-shadow: 0 0 0 1.5px #f5a623;
+  animation: branch-pulse 2s ease-in-out infinite;
+
+  &::after {
+    content: '★';
+    position: absolute;
+    top: -3px;
+    right: 2px;
+    font-size: 0.6rem;
+    color: #f5a623;
+    line-height: 1;
+  }
+}
+
+@keyframes branch-pulse {
+  0%, 100% { box-shadow: 0 0 0 1.5px #f5a623; }
+  50% { box-shadow: 0 0 4px 1.5px #f5a623; }
+}
+
+.legend-dot.branch-file {
+  background: var(--draft-bg);
+  box-shadow: 0 0 0 1.5px #f5a623;
+  position: relative;
+
+  &::after {
+    content: '★';
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    font-size: 0.5rem;
+    color: #f5a623;
+    line-height: 1;
+  }
+}
+
+// エラーバナー
+
+.error-banner {
+  background: #ffe082;
+  border: 1px solid #f5a623;
+  border-radius: 8px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  font-size: 0.85rem;
+  color: #6d4c00;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &::before {
+    content: '⚠️';
+    font-size: 1.1rem;
+  }
+}
+
+// ブランチ警告バナー
+
+.branch-banner {
+  background: #fce4e4;
+  border: 1px solid #e57373;
+  border-radius: 8px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  font-size: 0.85rem;
+  color: #b71c1c;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &::before {
+    content: '⚠️';
+    font-size: 1.1rem;
+  }
+
+  &.main-uncommitted {
+    background: #e3f2fd;
+    border-color: #64b5f6;
+    color: #1565c0;
+  }
+
+  &.main-uncommitted::before {
+    content: '📝';
+  }
+}
+
+.branch-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.btn-commit {
+  padding: 5px 14px;
+  background: #1565c0;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s, opacity 0.2s;
+
+  &:hover {
+    background: #0d47a1;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.btn-commit-push {
+  padding: 5px 14px;
+  background: #00796b;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s, opacity 0.2s;
+
+  &:hover {
+    background: #004d40;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.btn-merge-push {
+  padding: 5px 14px;
+  background: #43a047;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s, opacity 0.2s;
+
+  &:hover {
+    background: #2e7d32;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+// コミットモーダル
+
+.commit-card {
+  max-width: 480px;
+
+  h3 {
+    font-size: 1.15rem;
+    margin-bottom: 16px;
+  }
+}
+
+.commit-file-list {
+  max-height: 180px;
+  overflow-y: auto;
+  background: #f0f2f5;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 0.8rem;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.commit-file {
+  padding: 2px 0;
+  color: var(--text);
+}
+
+.commit-file-status {
+  display: inline-block;
+  width: 24px;
+  font-weight: 700;
+  color: #43a047;
+}

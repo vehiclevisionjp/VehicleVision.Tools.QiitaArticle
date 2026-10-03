@@ -8,9 +8,12 @@
 - Front Matter の更新を先頭ブロックに限定し、本文中の同名文字列や改行コード (CRLF) を壊さないよう修正
 - 記事ファイルのパスをパーサーから取得（`public/` 直下以外のレイアウトでも動作）、パストラバーサル対策
 - コミットモーダルの変更ファイル一覧で、パスの先頭 1 文字が欠ける問題を修正
+- 祝日の取得元を Google カレンダーに変更（既定: 日本の祝日）。設定 `articleCalendar.holidayCalendarId` でカレンダー ID / ICS の URL を変更でき、空にすると従来の holidays-jp を使用
 - 祝日 API にタイムアウト・リダイレクト上限を追加
 - 依存ライブラリを最新化
 - ダークテーマ / ハイコントラストに対応（VS Code のテーマに自動追従。年間グラフの配色も対応）
+- 設定 `articleCalendar.theme`（`auto` / `light` / `dark`、既定 `auto`）で配色を固定可能に
+- スタイルを SCSS 化（`scss/` から `npm run build` で CSS を生成。生成物はリポジトリに含めない）
 - テスト（vitest）と型チェック（`npm run typecheck`）を追加し、リリースワークフローで実行
 
 ## 0.0.8

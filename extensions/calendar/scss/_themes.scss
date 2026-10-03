@@ -1,0 +1,93 @@
+// テーマ（配色）定義
+//
+// 配色は CSS カスタムプロパティとして出力する。
+// - ライト: :root（既定）
+// - ダーク: body.qiita-dark（app.js が設定 `articleCalendar.theme` と VS Code のテーマから付与）
+
+@use "sass:map";
+
+$palettes: (
+  light: (
+    bg: #f0f2f5,
+    card: #ffffff,
+    border: #c9cdd4,
+    text: #1a1a2e,
+    text-muted: #555b6e,
+    published: #0f7b3f,
+    published-bg: #a8e6c3,
+    private: #7b2cbf,
+    private-bg: #d4b0f0,
+    scheduled: #0056d6,
+    scheduled-bg: #92b8f8,
+    scheduled-past: #e85d04,
+    scheduled-past-bg: #ffc078,
+    draft: #555b6e,
+    draft-bg: #ced4da,
+    ready: #0d9488,
+    ready-bg: #99f6e4,
+    today-bg: #fff0a0,
+    today-border: #f5a623,
+    hover: #e8eaed,
+    holiday: #c9190b,
+    holiday-bg: #ffd6d6,
+  ),
+  dark: (
+    bg: #1e1e1e,
+    card: #252526,
+    border: #404348,
+    text: #d9dbe0,
+    text-muted: #9ea3ad,
+    published: #5fd69a,
+    published-bg: #1d4a34,
+    private: #c79bf2,
+    private-bg: #43275f,
+    scheduled: #78a9ff,
+    scheduled-bg: #1f3d73,
+    scheduled-past: #ff9a52,
+    scheduled-past-bg: #6b3410,
+    draft: #a7adb8,
+    draft-bg: #3a3e45,
+    ready: #4fd8c6,
+    ready-bg: #14524b,
+    today-bg: #4a4317,
+    today-border: #d9a21b,
+    hover: #2d3033,
+    holiday: #ff8d80,
+    holiday-bg: #572725,
+  ),
+);
+
+@mixin palette($name) {
+  @each $key, $value in map.get($palettes, $name) {
+    --#{$key}: #{$value};
+  }
+}
+
+// ダークテーマ時だけ適用するルールをまとめる（トップレベル用）
+//   @include dark-root { .foo { ... } }  ->  body.qiita-dark .foo { ... }
+@mixin dark-root {
+  body.qiita-dark {
+    @content;
+  }
+}
+
+// ダークテーマ時の上書き（ルール内用）
+//   .foo { @include dark { ... } }  ->  body.qiita-dark .foo { ... }
+@mixin dark {
+  body.qiita-dark & {
+    @content;
+  }
+}
+
+:root {
+  @include palette(light);
+}
+
+body.qiita-dark {
+  color-scheme: dark;
+  @include palette(dark);
+}
+
+body:not(.qiita-dark) {
+  color-scheme: light;
+}

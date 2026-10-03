@@ -1,6 +1,25 @@
 // === VS Code Webview API ブリッジ ===
 const vscode = acquireVsCodeApi();
 const _pendingRequests = {};
+
+// === テーマ（設定 articleCalendar.theme: auto / light / dark） ===
+// auto は VS Code のテーマ（body の vscode-dark 等のクラス）に追従する
+let themeSetting = document.body.dataset.theme || 'auto';
+
+function isVsCodeDark() {
+  const c = document.body.classList;
+  return c.contains('vscode-dark') || (c.contains('vscode-high-contrast') && !c.contains('vscode-high-contrast-light'));
+}
+
+function applyTheme() {
+  const dark = themeSetting === 'dark' || (themeSetting !== 'light' && isVsCodeDark());
+  document.body.classList.toggle('qiita-dark', dark);
+}
+
+applyTheme();
+// VS Code のテーマ切り替え（body クラスの変更）に追従
+new MutationObserver(applyTheme).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
 let _requestId = 0;
 
 function apiRequest(command, params) {
@@ -18,6 +37,20 @@ window.addEventListener('message', event => {
     delete _pendingRequests[msg.id];
     if (msg.error) { reject(new Error(msg.error)); }
     else { resolve(msg.data); }
+  }
+  // 表示テーマの設定が変わったら反映する
+  if (msg.type === 'themeChanged') {
+    themeSetting = msg.theme || 'auto';
+    applyTheme();
+  }
+  // 祝日の取得元設定が変わったら祝日を取得し直す
+  if (msg.type === 'holidaysChanged') {
+    holidays = {};
+    holidayErrors = [];
+    (async function() {
+      await fetchHolidaysForCalendar();
+      render();
+    })();
   }
   // ファイル変更検知による自動リロード
   if (msg.type === 'fileChanged') {

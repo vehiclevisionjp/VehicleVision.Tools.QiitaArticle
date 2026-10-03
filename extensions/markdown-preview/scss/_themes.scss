@@ -1,0 +1,14 @@
+// テーマ補助
+//
+// VS Code の Markdown プレビューは body にテーマのクラスを付与する
+// （vscode-light / vscode-dark / vscode-high-contrast / vscode-high-contrast-light）。
+
+// ダークとハイコントラスト（ダーク）の両方に適用するルールをまとめる
+//   @include dark-root { .foo { ... } }
+//     -> .vscode-dark .foo, .vscode-high-contrast:not(.vscode-high-contrast-light) .foo { ... }
+@mixin dark-root {
+  .vscode-dark,
+  .vscode-high-contrast:not(.vscode-high-contrast-light) {
+    @content;
+  }
+}

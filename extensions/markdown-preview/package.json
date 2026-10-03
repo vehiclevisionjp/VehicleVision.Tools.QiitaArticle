@@ -28,8 +28,12 @@
     ]
   },
   "scripts": {
-    "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
-    "watch": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap --watch",
+    "build": "run-s build:css build:js",
+    "build:css": "sass --no-charset --no-source-map --style=expanded scss/qiita-markdown.scss media/qiita-markdown.css",
+    "build:js": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap",
+    "watch": "run-p watch:css watch:js",
+    "watch:css": "sass --no-charset --no-source-map --style=expanded --watch scss/qiita-markdown.scss media/qiita-markdown.css",
+    "watch:js": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap --watch",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.test.json",
     "package": "npx @vscode/vsce package --no-dependencies"
@@ -40,6 +44,8 @@
     "@types/vscode": "~1.85.0",
     "esbuild": "^0.28.2",
     "markdown-it": "^14.3.2",
+    "npm-run-all2": "^9.0.3",
+    "sass": "^1.105.1",
     "typescript": "^7.0.2",
     "vitest": "^5.0.3"
   }
