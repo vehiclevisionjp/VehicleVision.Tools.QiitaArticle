@@ -13,7 +13,7 @@
  * 参照: resources/qiita-markdown - lib/qiita/markdown/filters/custom_block.rb
  */
 
-const { isPublicArticle } = require('./_helpers');
+const { isPublicArticle, proseLines } = require('./_helpers');
 
 /** @type {import("markdownlint").Rule} */
 module.exports = {
@@ -21,27 +21,19 @@ module.exports = {
   description: ':::note ブロックの構文が正しいこと',
   tags: ['qiita', 'custom-block'],
   function: function rule(params, onError) {
-    if (!isPublicArticle(params.name)) return;
+    if (!isPublicArticle(params.name, params.frontMatterLines)) return;
 
-    const lines = params.lines;
+    const lines = proseLines(params);
     const noteStack = [];
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
+      const line = lines[i].replace(/^(?: {0,3}> ?)+/, '').trimStart();
       const lineNumber = i + 1;
 
       // :::note の開始を検出
       const noteOpenMatch = line.match(/^:::note\b(.*)$/);
       if (noteOpenMatch) {
-        const rest = noteOpenMatch[1].trim();
-        const validSubTypes = ['', 'info', 'warn', 'alert'];
-
-        if (!validSubTypes.includes(rest)) {
-          onError({
-            lineNumber,
-            detail: `:::note のサブタイプ "${rest}" は無効です。info, warn, alert のいずれかを指定してください`,
-          });
-        }
+        // Upstream reads two words and falls back to info for unknown subtypes.
 
         noteStack.push({ lineNumber, type: 'note' });
         continue;

@@ -7,7 +7,7 @@ VS Code で Qiita 記事を楽に管理するための**追加ツールキット
 
 - **記事カレンダー** — VS Code 内のカレンダー UI で記事の一覧表示・新規作成・日付変更・Git 操作まで完結
 - **Qiita Markdown プレビュー** — `:::note` / `lang:filename` / 数式など Qiita 固有構文をそのままプレビュー
-- **Qiita 固有 Lint** — 7 つのカスタムルールで Qiita 記法を保存時にリアルタイム検証
+- **Qiita 固有 Lint** — カスタムルールで Qiita 記法と CLI の Front Matter を検証
 - **記事作成スクリプト** — ブランチ作成・ファイル配置・Front Matter 設定を 1 コマンドで完了
 - **予約投稿** — `scheduled_publish` による日時指定の自動公開
 - **GitHub Actions 連携** — `main` への push で自動公開
@@ -18,10 +18,10 @@ VS Code で Qiita 記事を楽に管理するための**追加ツールキット
 
 ### 前提条件
 
-- **Node.js** 20.0.0 以上
+- **Node.js** 22.22.1 以上
 - **PowerShell** 7.0 以上（スクリプト実行用）
 - **VS Code** 1.85.0 以上
-- **Qiita CLI** 1.8.0 以上（サブディレクトリを使った記事管理に必要）（[Qiita CLI の導入](https://github.com/increments/qiita-cli)）
+- **Qiita CLI** 1.12.0（配布用 `package.json` と公開ワークフローで固定）（[Qiita CLI の導入](https://github.com/increments/qiita-cli)）
 
 ### 1. VS Code 拡張機能のインストール
 
@@ -120,7 +120,7 @@ npm install
 ![calendar-overview](images/calendar-overview-bottom.png)
 
 VS Code 内にカレンダー UI を表示し、記事の管理・作成・Git 操作をすべて GUI で行えます。  
-ワークスペースに `qiita.config.json` または `public/` ディレクトリが存在すると自動的にアクティブになります。
+ワークスペースフォルダごとに、`qiita.config.json` の存在、または `package.json` の `dependencies` / `devDependencies` にある `@qiita/qiita-cli` の依存宣言を確認します。`public/` の存在だけではカレンダーを表示しません。
 マルチルートワークスペースでは、Qiita 記事フォルダごとにカレンダーを開けます。VS Code のテーマ（ライト / ダーク / ハイコントラスト）にも自動で追従します。
 
 ![calendar-overview-dark](images/calendar-overview-dark.png)
@@ -189,7 +189,7 @@ VS Code 内にカレンダー UI を表示し、記事の管理・作成・Git �
 ![markdown-preview](images/markdown-preview.png)
 
 VS Code 標準の Markdown プレビューに Qiita 固有構文のサポートを追加します。  
-ワークスペースに `qiita.config.json` または `public/` ディレクトリが存在すると自動的にアクティブになります。  
+ワークスペースフォルダごとに `qiita.config.json` または `@qiita/qiita-cli` の依存宣言から判定し、対象フォルダの `public/` 配下だけに Qiita の構文・スタイルを適用します。README や通常の Markdown、文書のパスが不明な場合には適用しません。
 `Ctrl+Shift+V` でプレビューを開くと、Qiita と同じ見た目で記事を確認できます。
 
 | 構文                        | 説明                                       |
@@ -386,15 +386,17 @@ Qiita API から投稿日時を取得し、Front Matter に `created_at` を追�
 
 ## カスタム Lint ルール
 
-| ルール ID | 名前                    | 検証内容                                    |
-| --------- | ----------------------- | ------------------------------------------- |
-| QFM001    | `qiita-front-matter`    | 必須 Front Matter フィールドの存在チェック  |
-| QFM002    | `qiita-note-block`      | `:::note` ブロックの構文・サブタイプ検証    |
-| QFM003    | `qiita-code-block`      | コードブロック `lang:filename` 記法の検証   |
-| QFM004    | `qiita-math-block`      | `$$` / ` ```math ` ブロックの開閉対応検証   |
-| QFM005    | `qiita-details-summary` | `<details>` / `<summary>` の対応検証        |
-| QFM006    | `qiita-embed`           | 埋め込み iframe/script のホワイトリスト検証 |
-| QFM007    | `qiita-inline-math`     | インライン数式 `$`\``...\``$` の構文検証    |
+| ルール ID | 名前                    | 検証内容                                           |
+| --------- | ----------------------- | -------------------------------------------------- |
+| QFM001    | `qiita-front-matter`    | CLI の Front Matter の必須キー・型の検証           |
+| QFM002    | `qiita-note-block`      | `:::note` ブロックの開閉検証                       |
+| QFM003    | `qiita-code-block`      | 設定互換用。上流が許容するメタデータには警告しない |
+| QFM004    | `qiita-math-block`      | `$$` / ` ```math ` ブロックの開閉対応検証          |
+| QFM005    | `qiita-details-summary` | `<details>` の開閉検証。summary は任意             |
+| QFM006    | `qiita-embed`           | 埋め込み iframe/script のホワイトリスト検証        |
+| QFM007    | `qiita-inline-math`     | インライン数式 `$`\``...\``$` の構文検証           |
+
+上流の確認バージョン、互換性の範囲、更新手順は [Qiita 互換性の基準](docs/upstream-compatibility.md) を参照してください。
 
 ---
 

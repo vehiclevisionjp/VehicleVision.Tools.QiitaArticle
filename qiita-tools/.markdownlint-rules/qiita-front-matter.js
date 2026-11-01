@@ -1,58 +1,66 @@
-// @ts-check
-
 'use strict';
-
-/**
- * Qiita 記事の Front Matter 必須フィールドを検証するカスタムルール
- *
- * 必須フィールド: title, tags, private, organization_url_name
- * Front Matter が存在しない場合もエラーとする
- */
-
+const matter = require('gray-matter');
 const { isPublicArticle } = require('./_helpers');
 
-const REQUIRED_FIELDS = ['title', 'tags', 'private', 'organization_url_name'];
+// Qiita CLI 1.12.0 check-frontmatter-type.ts (article metadata only).
+const nullableString = (value) => value === null || typeof value === 'string';
+const fields = {
+  title: nullableString,
+  tags: Array.isArray,
+  private: (value) => typeof value === 'boolean',
+  updated_at: nullableString,
+  id: nullableString,
+  organization_url_name: nullableString,
+  slide: (value) => typeof value === 'boolean',
+};
+const optionalFields = {
+  ignorePublish: (value) => typeof value === 'boolean',
+  posting_campaign_uuid: nullableString,
+  agreed_posting_campaign_term: (value) => typeof value === 'boolean',
+};
 
-/** @type {import("markdownlint").Rule} */
 module.exports = {
   names: ['qiita-front-matter', 'QFM001'],
-  description: 'Qiita 記事に必須の Front Matter フィールドが存在すること',
+  description: 'Qiita CLI の記事 Front Matter の存在と型が正しいこと',
   tags: ['front-matter', 'qiita'],
-  function: function rule(params, onError) {
-    if (!isPublicArticle(params.name)) return;
-
+  function(params, onError) {
+    if (!isPublicArticle(params.name, params.frontMatterLines)) return;
     const lines = params.frontMatterLines;
-
-    // Front Matter が存在しない
-    if (!lines || lines.length === 0) {
+    if (!lines?.length) {
       onError({
         lineNumber: 1,
         detail:
-          'Front Matter が見つかりません（--- で囲まれた YAML ブロックが必要です）',
+          'Front Matter が見つかりません（--- で囲まれた YAML が必要です）',
       });
       return;
     }
-
-    // Front Matter の内容を解析（簡易パース: "key:" の存在チェック）
-    const content = lines.join('\n');
-
-    for (const field of REQUIRED_FIELDS) {
-      const pattern = new RegExp(`^${field}\\s*:`, 'm');
-      if (!pattern.test(content)) {
+    let data;
+    try {
+      data = matter(lines.join('\n')).data;
+    } catch {
+      onError({ lineNumber: 1, detail: 'Front Matter の YAML が不正です' });
+      return;
+    }
+    for (const [field, validate] of Object.entries(fields)) {
+      if (!Object.prototype.hasOwnProperty.call(data, field)) {
         onError({
           lineNumber: 1,
           detail: `必須フィールド "${field}" が Front Matter に定義されていません`,
         });
+      } else if (!validate(data[field])) {
+        onError({
+          lineNumber: 1,
+          detail: `"${field}" の型が Qiita CLI の仕様と一致しません`,
+        });
       }
     }
-
-    // title が空でないことを確認
-    const titleMatch = content.match(/^title\s*:\s*(.*)$/m);
-    if (titleMatch && titleMatch[1].trim() === '') {
-      onError({
-        lineNumber: 1,
-        detail: '"title" が空です。記事タイトルを設定してください',
-      });
+    for (const [field, validate] of Object.entries(optionalFields)) {
+      if (data[field] !== undefined && !validate(data[field])) {
+        onError({
+          lineNumber: 1,
+          detail: `"${field}" の型が Qiita CLI の仕様と一致しません`,
+        });
+      }
     }
   },
 };

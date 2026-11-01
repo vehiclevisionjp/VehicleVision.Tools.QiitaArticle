@@ -5,14 +5,12 @@ import { ArticleParser, ArticleInfo, UNDATED_PREFIX } from './articleParser';
 import { DEFAULT_HOLIDAY_CALENDAR_ID, HolidayService } from './holidayService';
 import { GitService } from './gitService';
 import { removeField, setField } from './frontMatter';
+import { isQiitaRoot } from './qiitaProject';
 
-/** Qiita 記事リポジトリとみなす条件: qiita.config.json または public/ がある */
+/** 各フォルダの設定ファイルまたは CLI 依存宣言から判定する。 */
 function isQiitaFolder(folder: vscode.WorkspaceFolder): boolean {
   const root = folder.uri.fsPath;
-  return (
-    fs.existsSync(path.join(root, 'qiita.config.json')) ||
-    fs.existsSync(path.join(root, 'public'))
-  );
+  return isQiitaRoot(root);
 }
 
 export class CalendarPanel {
@@ -48,7 +46,7 @@ export class CalendarPanel {
     const candidates = CalendarPanel.getCandidateFolders();
     if (candidates.length === 0) {
       vscode.window.showErrorMessage(
-        'Qiita 記事フォルダが見つかりません（qiita.config.json または public/ を含むフォルダが必要です）',
+        'Qiita 記事フォルダが見つかりません（qiita.config.json または @qiita/qiita-cli の依存宣言が必要です）',
       );
       return;
     }

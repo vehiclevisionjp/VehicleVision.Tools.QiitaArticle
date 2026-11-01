@@ -20,7 +20,6 @@ const IFRAME_HOST_WHITE_LIST = [
   'www.slideshare.net',
   'docs.google.com',
   'drive.google.com',
-  'speakerdeck.com',
   'www.figma.com',
   'embed.figma.com',
   'docswell.com',
@@ -37,7 +36,6 @@ const SCRIPT_URL_WHITE_LIST = [
   'https://cpwebassets.codepen.io/assets/embed/ei.js',
   'https://public.codepenassets.com/embed/index.js',
   'https://platform.twitter.com/widgets.js',
-  'https://platform.x.com/widgets.js',
   '//speakerdeck.com/assets/embed.js',
   'https://www.docswell.com/assets/libs/docswell-embed/docswell-embed.min.js',
   '//www.docswell.com/assets/libs/docswell-embed/docswell-embed.min.js',
@@ -62,7 +60,7 @@ function extractHost(url) {
   }
 }
 
-const { isPublicArticle } = require('./_helpers');
+const { isPublicArticle, htmlFragments } = require('./_helpers');
 
 /** @type {import("markdownlint").Rule} */
 module.exports = {
@@ -70,62 +68,74 @@ module.exports = {
   description: 'Qiita で許可されている埋め込みサービスのみ使用していること',
   tags: ['qiita', 'embed', 'iframe', 'script'],
   function: function rule(params, onError) {
-    if (!isPublicArticle(params.name)) return;
+    if (!isPublicArticle(params.name, params.frontMatterLines)) return;
 
-    const lines = params.lines;
-    let inCodeFence = false;
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const lineNumber = i + 1;
-
-      // コードフェンス内はスキップ
-      if (/^(`{3,}|~{3,})/.test(line)) {
-        inCodeFence = !inCodeFence;
-        continue;
-      }
-      if (inCodeFence) continue;
-
-      // iframe の src を検証
-      const iframeMatch = line.match(
-        /<iframe\s[^>]*src\s*=\s*["']([^"']+)["']/i,
+    for (const fragment of htmlFragments(params)) {
+      const html = fragment.content.replace(/<!--[^]*?(?:-->|$)/g, (s) =>
+        s.replace(/[^\n]/g, ' '),
       );
-      if (iframeMatch) {
-        const src = iframeMatch[1];
+      for (const tag of html.matchAll(
+        /<(iframe|script)\b(?:"[^"]*"|'[^']*'|[^'">])*>/gi,
+      )) {
+        const line = tag[0];
+        const lineNumber =
+          fragment.lineNumber +
+          (html.slice(0, tag.index).match(/\n/g) || []).length;
 
-        // javascript: スキームをブロック
-        if (/^javascript:/i.test(src)) {
-          onError({
-            lineNumber,
-            detail: 'iframe の src に javascript: スキームは使用できません',
-          });
-          continue;
+        // iframe の src を検証
+        const iframeMatch = line.match(
+          /<iframe(?=\s)[^>]*?\ssrc\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i,
+        );
+        if (iframeMatch) {
+          const src = iframeMatch[1] ?? iframeMatch[2] ?? iframeMatch[3];
+
+          // javascript: スキームをブロック
+          if (/^javascript:/i.test(src)) {
+            onError({
+              lineNumber,
+              detail: 'iframe の src に javascript: スキームは使用できません',
+            });
+            continue;
+          }
+
+          const host = extractHost(src);
+          if (
+            !host ||
+            !/^(?:https?:|\/\/)/i.test(src) ||
+            !IFRAME_HOST_WHITE_LIST.includes(host)
+          ) {
+            onError({
+              lineNumber,
+              detail: `iframe のホスト "${host}" は Qiita で許可されていません。許可ホスト: ${IFRAME_HOST_WHITE_LIST.join(', ')}`,
+            });
+          }
         }
 
-        const host = extractHost(src);
-        if (host && !IFRAME_HOST_WHITE_LIST.includes(host)) {
-          onError({
-            lineNumber,
-            detail: `iframe のホスト "${host}" は Qiita で許可されていません。許可ホスト: ${IFRAME_HOST_WHITE_LIST.join(', ')}`,
-          });
+        // script の src を検証
+        const scriptMatch = line.match(
+          /<script(?=\s)[^>]*?\ssrc\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i,
+        );
+        if (scriptMatch) {
+          const src = scriptMatch[1] ?? scriptMatch[2] ?? scriptMatch[3];
+          const host = extractHost(src);
+
+          const isAllowedUrl = SCRIPT_URL_WHITE_LIST.includes(src);
+          const isAllowedHost =
+            /^https?:/i.test(src) &&
+            host &&
+            SCRIPT_HOST_WHITE_LIST.includes(host);
+
+          if (!isAllowedUrl && !isAllowedHost) {
+            onError({
+              lineNumber,
+              detail: `script の src "${src}" は Qiita で許可されていません`,
+            });
+          }
         }
-      }
-
-      // script の src を検証
-      const scriptMatch = line.match(
-        /<script\s[^>]*src\s*=\s*["']([^"']+)["']/i,
-      );
-      if (scriptMatch) {
-        const src = scriptMatch[1];
-        const host = extractHost(src);
-
-        const isAllowedUrl = SCRIPT_URL_WHITE_LIST.includes(src);
-        const isAllowedHost = host && SCRIPT_HOST_WHITE_LIST.includes(host);
-
-        if (!isAllowedUrl && !isAllowedHost) {
+        if (!iframeMatch && !scriptMatch) {
           onError({
             lineNumber,
-            detail: `script の src "${src}" は Qiita で許可されていません`,
+            detail: `${tag[1]} の src がありません。Qiita では削除されます`,
           });
         }
       }

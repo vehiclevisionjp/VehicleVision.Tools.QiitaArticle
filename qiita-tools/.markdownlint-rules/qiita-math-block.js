@@ -13,7 +13,7 @@
  *        resources/qiita-markdown - lib/qiita/markdown/filters/qiita_marker.rb
  */
 
-const { isPublicArticle } = require('./_helpers');
+const { isPublicArticle, proseLines, getTokens } = require('./_helpers');
 
 /** @type {import("markdownlint").Rule} */
 module.exports = {
@@ -21,47 +21,27 @@ module.exports = {
   description: '数式ブロック（$$ / ```math）の構文が正しいこと',
   tags: ['qiita', 'math'],
   function: function rule(params, onError) {
-    if (!isPublicArticle(params.name)) return;
+    if (!isPublicArticle(params.name, params.frontMatterLines)) return;
 
-    const lines = params.lines;
+    const lines = proseLines(params);
     let inMathDollar = false;
     let mathDollarStart = 0;
-    let inCodeFence = false;
-    let codeFenceLang = '';
-    let codeFenceStart = 0;
-    let codeFenceContent = '';
+    for (const token of getTokens(params)) {
+      if (
+        token.type === 'fence' &&
+        token.info.trim() === 'math' &&
+        !token.content.trim()
+      ) {
+        onError({
+          lineNumber: token.lineNumber || token.map[0] + 1,
+          detail: 'math ブロックの中身が空です',
+        });
+      }
+    }
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
+      const line = lines[i].replace(/^(?: {0,3}> ?)+/, '').trim();
       const lineNumber = i + 1;
-
-      // コードフェンスの開閉を追跡
-      const fenceMatch = line.match(/^(`{3,}|~{3,})(.*)$/);
-      if (fenceMatch) {
-        if (!inCodeFence) {
-          inCodeFence = true;
-          codeFenceLang = fenceMatch[2].trim();
-          codeFenceStart = lineNumber;
-          codeFenceContent = '';
-        } else {
-          // コードフェンスの閉じ
-          if (codeFenceLang === 'math' && codeFenceContent.trim() === '') {
-            onError({
-              lineNumber: codeFenceStart,
-              detail: '```math ブロックの中身が空です',
-            });
-          }
-          inCodeFence = false;
-          codeFenceLang = '';
-        }
-        continue;
-      }
-
-      // コードフェンス内の内容を蓄積
-      if (inCodeFence) {
-        codeFenceContent += line + '\n';
-        continue;
-      }
 
       // $$ ブロックの開閉を追跡（コードフェンス外のみ）
       if (/^\$\$\s*$/.test(line)) {

@@ -18,7 +18,7 @@
   ],
   "activationEvents": [
     "workspaceContains:qiita.config.json",
-    "workspaceContains:public/"
+    "workspaceContains:package.json"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -43,7 +43,7 @@
     "@types/node": "^24.0.0",
     "@types/vscode": "~1.85.0",
     "esbuild": "^0.28.2",
-    "markdown-it": "^14.3.2",
+    "markdown-it": "^14.3.3",
     "npm-run-all2": "^9.0.3",
     "sass": "^1.105.1",
     "typescript": "^7.0.2",
