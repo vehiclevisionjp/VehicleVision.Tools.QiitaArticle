@@ -28,17 +28,16 @@ export type Fetcher = (url: string) => Promise<string>;
 
 /**
  * 祝日の取得元:
- * - 設定 `articleCalendar.holidayCalendarId`（既定: DEFAULT_HOLIDAY_CALENDAR_ID）に
- *   Google カレンダー ID または ICS の URL を指定: 公開カレンダーの ICS から取得
- * - 空文字を指定: holidays-jp API（日本の祝日）
+ * 設定 `articleCalendar.holidayCalendarId`（既定: DEFAULT_HOLIDAY_CALENDAR_ID）に
+ * 指定した Google カレンダー ID または ICS の URL から、公開カレンダーの ICS を取得する。
+ * 空文字の場合は既定のカレンダーを使用する。
  */
 export class HolidayService {
   private cache = new Map<string, HolidayResult>();
   private icsCache = new Map<string, { at: number; events: IcsEvent[] }>();
 
   /**
-   * @param getSource 取得元（Google カレンダー ID / ICS URL）。空文字なら holidays-jp
-   *   （既定値は DEFAULT_HOLIDAY_CALENDAR_ID）
+   * @param getSource 取得元（Google カレンダー ID / ICS URL）。空文字なら既定のカレンダー
    * @param fetcher テスト用に差し替え可能な HTTP 取得関数
    */
   constructor(
@@ -47,7 +46,8 @@ export class HolidayService {
   ) {}
 
   async getHolidays(year: number): Promise<HolidayResult> {
-    const source = (this.getSource() || '').trim();
+    const source =
+      (this.getSource() || '').trim() || DEFAULT_HOLIDAY_CALENDAR_ID;
     const key = `${source}|${year}`;
     const cached = this.cache.get(key);
     if (cached) {
@@ -55,35 +55,21 @@ export class HolidayService {
     }
 
     try {
-      const result = source
-        ? await this.fromCalendar(source, year)
-        : await this.fromHolidaysJp(year);
+      const result = await this.fromCalendar(source, year);
       this.cache.set(key, result);
       console.log(
         `📅 ${year}年の祝日を取得しました (${result.holidays.length}件)`,
       );
       return result;
     } catch (err: any) {
-      const label = source ? 'Google カレンダー' : '祝日API';
       const result: HolidayResult = {
         success: false,
-        error: `${label}の取得に失敗しました (${year}年): ${err.message}`,
+        error: `Google カレンダーの取得に失敗しました (${year}年): ${err.message}`,
         holidays: [],
       };
       console.warn(`⚠️ ${result.error}`);
       return result;
     }
-  }
-
-  private async fromHolidaysJp(year: number): Promise<HolidayResult> {
-    const json = await this.fetcher(
-      `https://holidays-jp.github.io/api/v1/${year}/date.json`,
-    );
-    const dict = JSON.parse(json) as Record<string, string>;
-    const holidays = Object.entries(dict)
-      .map(([date, name]) => ({ date, name }))
-      .sort((a, b) => a.date.localeCompare(b.date));
-    return { success: true, error: null, holidays };
   }
 
   private async fromCalendar(

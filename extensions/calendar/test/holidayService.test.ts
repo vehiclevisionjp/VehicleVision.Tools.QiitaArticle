@@ -83,18 +83,17 @@ describe('HolidayService', () => {
     );
   });
 
-  it('設定が空なら holidays-jp から取得する', async () => {
-    const fetcher = vi
-      .fn()
-      .mockResolvedValue(
-        JSON.stringify({ '2026-01-01': '元日', '2026-01-12': '成人の日' }),
-      );
-    const svc = new HolidayService(() => '', fetcher);
-    const r = await svc.getHolidays(2026);
-    expect(fetcher).toHaveBeenCalledWith(
-      'https://holidays-jp.github.io/api/v1/2026/date.json',
-    );
-    expect(r.holidays.map((h) => h.name)).toEqual(['元日', '成人の日']);
+  it('設定が空（空白のみ含む）なら既定のカレンダーから取得し、holidays-jp は使わない', async () => {
+    const fetcher = vi.fn().mockResolvedValue(ICS);
+    for (const source of ['', '  ']) {
+      const svc = new HolidayService(() => source, fetcher);
+      const r = await svc.getHolidays(2026);
+      expect(r.holidays.map((h) => h.name)).toEqual(['スポーツの日']);
+    }
+    for (const [url] of fetcher.mock.calls) {
+      expect(url).toContain('ja.japanese.official%23holiday');
+      expect(url).not.toContain('holidays-jp');
+    }
   });
 
   it('Google カレンダー ID なら ICS から年で絞り、行事を除外する', async () => {
@@ -121,13 +120,15 @@ describe('HolidayService', () => {
   });
 
   it('取得元の設定変更が次回の取得に反映される', async () => {
-    let source = '';
+    let source = 'a@example.com';
     const fetcher = vi.fn(async (url: string) =>
-      url.includes('holidays-jp') ? '{"2026-01-01":"元日"}' : ICS,
+      url.includes('a%40example.com')
+        ? ICS.replace('スポーツの日', '甲の日')
+        : ICS,
     );
     const svc = new HolidayService(() => source, fetcher);
-    expect((await svc.getHolidays(2026)).holidays[0].name).toBe('元日');
-    source = 'ja.japanese#holiday@group.v.calendar.google.com';
+    expect((await svc.getHolidays(2026)).holidays[0].name).toBe('甲の日');
+    source = 'b@example.com';
     expect((await svc.getHolidays(2026)).holidays[0].name).toBe('スポーツの日');
   });
 
