@@ -57,7 +57,7 @@
           "type": "string",
           "default": "ja.japanese.official#holiday@group.v.calendar.google.com",
           "scope": "resource",
-          "markdownDescription": "祝日の取得元となる Google カレンダーの ID、または公開 ICS の URL。既定は日本の祝日（`ja.japanese.official#holiday@group.v.calendar.google.com`）。他国の祝日などに変更できます（例: `en.usa#holiday@group.v.calendar.google.com`）。空にすると holidays-jp の API（日本の祝日）を使用します。カレンダーは公開されている必要があります。"
+          "markdownDescription": "祝日の取得元となる Google カレンダーの ID、または公開 ICS の URL。既定は日本の祝日（`ja.japanese.official#holiday@group.v.calendar.google.com`）。他国の祝日などに変更できます（例: `en.usa#holiday@group.v.calendar.google.com`）。空にすると既定の日本の祝日を使用します。カレンダーは公開されている必要があります。"
         }
       }
     }

@@ -169,7 +169,7 @@ VS Code 内にカレンダー UI を表示し、記事の管理・作成・Git �
 | -------------- | ----------------------------------------------------------------------------------------------------- |
 | データソース   | Google カレンダーの公開カレンダー（既定: `ja.japanese.official#holiday@group.v.calendar.google.com`） |
 | 変更方法       | 設定 `articleCalendar.holidayCalendarId` に Google カレンダー ID または公開 ICS の URL を指定         |
-| 従来方式       | 設定を空にすると [holidays-jp](https://github.com/holidays-jp) の JSON API（日本の祝日）を使用        |
+| 空の場合       | 設定を空にすると既定のカレンダー（日本の祝日）を使用                                                  |
 | キャッシュ     | 取得した ICS を一定時間インメモリキャッシュ（同じカレンダーの再リクエストは発生しない）               |
 | エラー時の動作 | カレンダー上部にエラーバナーを表示（カレンダー自体は引き続き利用可能）                                |
 | ネットワーク   | 初回取得時にインターネット接続が必要（取得後はキャッシュで動作）                                      |
@@ -178,11 +178,11 @@ VS Code 内にカレンダー UI を表示し、記事の管理・作成・Git �
 
 **VS Code 設定:**
 
-| 設定キー                            | デフォルト                                                 | 説明                                                                     |
-| ----------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `articleCalendar.autoOpen`          | `true`                                                     | ワークスペースを開いたときにカレンダーを自動表示                         |
-| `articleCalendar.theme`             | `auto`                                                     | カレンダーの配色。`auto`（VS Code のテーマに追従）/ `light` / `dark`     |
-| `articleCalendar.holidayCalendarId` | `ja.japanese.official#holiday@group.v.calendar.google.com` | 祝日の取得元（Google カレンダー ID / 公開 ICS の URL。空で holidays-jp） |
+| 設定キー                            | デフォルト                                                 | 説明                                                                 |
+| ----------------------------------- | ---------------------------------------------------------- | -------------------------------------------------------------------- |
+| `articleCalendar.autoOpen`          | `true`                                                     | ワークスペースを開いたときにカレンダーを自動表示                     |
+| `articleCalendar.theme`             | `auto`                                                     | カレンダーの配色。`auto`（VS Code のテーマに追従）/ `light` / `dark` |
+| `articleCalendar.holidayCalendarId` | `ja.japanese.official#holiday@group.v.calendar.google.com` | 祝日の取得元（Google カレンダー ID / 公開 ICS の URL。空で既定）     |
 
 ### Qiita Markdown プレビュー拡張
 

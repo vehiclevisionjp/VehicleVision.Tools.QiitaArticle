@@ -62,7 +62,7 @@ Qiita: 記事カレンダーを開く
 - 取得元は設定 `articleCalendar.holidayCalendarId` で変更できます（Google カレンダー ID または公開 ICS の URL。ワークスペースフォルダごとに設定可能）
   - 既定: `ja.japanese.official#holiday@group.v.calendar.google.com`
   - 例（米国）: `en.usa#holiday@group.v.calendar.google.com`
-  - 空にすると従来どおり holidays-jp の API を使用します
+  - 空にすると既定（日本の祝日）を使用します
 - カレンダーは公開されている必要があります
 
 - 初回取得時にインターネット接続が必要です（取得後はキャッシュで動作）
