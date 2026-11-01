@@ -17,3 +17,25 @@ export function isQiitaRoot(root: string): boolean {
     return false;
   }
 }
+
+/**
+ * Qiita roots for a workspace folder: the folder itself, or, when it is a plain
+ * parent directory (e.g. D:\repos\doc), its direct child directories that qualify.
+ */
+export function findQiitaRoots(root: string): string[] {
+  if (isQiitaRoot(root)) return [root];
+  try {
+    return fs
+      .readdirSync(root, { withFileTypes: true })
+      .filter(
+        (entry) =>
+          entry.isDirectory() &&
+          entry.name !== 'node_modules' &&
+          !entry.name.startsWith('.'),
+      )
+      .map((entry) => path.join(root, entry.name))
+      .filter(isQiitaRoot);
+  } catch {
+    return [];
+  }
+}

@@ -45,6 +45,17 @@ button .codicon {
   gap: 8px;
 }
 
+.project-select {
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  height: 36px;
+  padding: 0 8px;
+  max-width: 240px;
+  box-sizing: border-box;
+}
+
 .btn-reload {
   background: var(--card);
   color: var(--text);

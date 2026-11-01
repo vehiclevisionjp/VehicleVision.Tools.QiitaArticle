@@ -1,6 +1,6 @@
 import type MarkdownIt from 'markdown-it';
 import * as vscode from 'vscode';
-import { isQiitaRoot } from './qiitaProject';
+import { findQiitaRoots } from './qiitaProject';
 import * as path from 'path';
 
 /**
@@ -118,9 +118,8 @@ function isQiitaDocument(currentDocument: unknown): boolean {
     if (doc !== root && !doc.startsWith(root + path.sep)) {
       continue;
     }
-    return (
-      doc.startsWith(path.join(root, 'public') + path.sep) &&
-      isQiitaRoot(folder.uri.fsPath)
+    return findQiitaRoots(folder.uri.fsPath).some((qiitaRoot) =>
+      doc.startsWith(path.join(normalizePath(qiitaRoot), 'public') + path.sep),
     );
   }
   return false;
