@@ -64,6 +64,8 @@ URL を単独行に記述すると、対応サービスの埋め込みカード�
 
 Qiita 記事の Markdown ファイルを開き、通常どおり Markdown プレビュー（`Ctrl+Shift+V` または `Ctrl+K V`）を表示するだけで、Qiita 固有の構文が自動的に反映されます。
 
+マルチルートでは各フォルダを個別に判定します。`qiita.config.json` がある、または `package.json` に `@qiita/qiita-cli` の依存宣言があるフォルダの `public/` 配下だけが対象です。README や他フォルダには Qiita の改行処理・構文・基本スタイルを適用しません。
+
 ## テーマ対応
 
 VS Code のライト・ダーク・ハイコントラストテーマに対応しています。
@@ -71,4 +73,5 @@ VS Code のライト・ダーク・ハイコントラストテーマに対応し
 ## 動作要件
 
 - VS Code 1.85.0 以上
-- ワークスペースに `qiita.config.json` または `public/` ディレクトリが存在すること
+- 対象フォルダに `qiita.config.json`、または `package.json` の `dependencies` / `devDependencies` に `@qiita/qiita-cli` の宣言があること
+- 対象文書がそのフォルダの `public/` 配下にあること

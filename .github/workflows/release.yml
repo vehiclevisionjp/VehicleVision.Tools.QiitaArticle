@@ -79,11 +79,18 @@ jobs:
           npx --yes @vscode/vsce package --no-dependencies \
             -o VehicleVision.Tools.QiitaArticle.MarkdownPreview.vsix
 
+      - name: Test lint tools
+        working-directory: qiita-tools
+        run: |
+          npm install
+          npm test
+          npx --no-install qiita version
+
       # ── lint/ツールファイルを ZIP にまとめる ──────────────
       - name: Package lint tools
         run: |
           cd qiita-tools
-          zip -r ../qiita-tools.zip .
+          zip -r ../qiita-tools.zip . -x 'node_modules/*' 'package-lock.json'
 
       # ── VS Code Marketplace へ公開 ────────────────────────
       - name: Publish to VS Code Marketplace

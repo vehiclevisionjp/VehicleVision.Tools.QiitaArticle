@@ -1,75 +1,35 @@
-// @ts-check
-
 'use strict';
+const { isPublicArticle, htmlFragments } = require('./_helpers');
 
-/**
- * Qiita の Details/Summary（折りたたみ）構文を検証するカスタムルール
- *
- * 検証対象:
- * - <details> に対応する </details> があること
- * - <details> 内に <summary> が存在すること
- *
- * 参照: resources/qiita-markdown - lib/qiita/markdown/filters/final_sanitizer.rb
- */
-
-const { isPublicArticle } = require('./_helpers');
-
-/** @type {import("markdownlint").Rule} */
 module.exports = {
   names: ['qiita-details-summary', 'QFM005'],
-  description: '<details> ブロックの構文が正しいこと',
+  description: '<details> の開閉が対応していること（summary は任意）',
   tags: ['qiita', 'html', 'details'],
-  function: function rule(params, onError) {
-    if (!isPublicArticle(params.name)) return;
-
-    const lines = params.lines;
-    let detailsStack = [];
-    let hasSummaryInCurrentDetails = false;
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const lineNumber = i + 1;
-
-      // <details> の開始を検出
-      if (/<details(\s[^>]*)?>/.test(line)) {
-        detailsStack.push({
-          lineNumber,
-          hasSummary: false,
-        });
-        hasSummaryInCurrentDetails = false;
-      }
-
-      // <summary> を検出
-      if (/<summary[\s>]/.test(line) && detailsStack.length > 0) {
-        detailsStack[detailsStack.length - 1].hasSummary = true;
-      }
-
-      // </details> の終了を検出
-      if (/<\/details>/.test(line)) {
-        if (detailsStack.length === 0) {
-          onError({
-            lineNumber,
-            detail: '対応する <details> がない </details> が見つかりました',
-          });
-        } else {
-          const open = detailsStack.pop();
-          if (!open.hasSummary) {
+  function(params, onError) {
+    if (!isPublicArticle(params.name, params.frontMatterLines)) return;
+    const stack = [];
+    for (const fragment of htmlFragments(params)) {
+      const content = fragment.content.replace(/<!--[^]*?(?:-->|$)/g, (s) =>
+        s.replace(/[^\n]/g, ' '),
+      );
+      for (const match of content.matchAll(/<\/?details\b[^>]*>/gi)) {
+        const lineNumber =
+          fragment.lineNumber +
+          (content.slice(0, match.index).match(/\n/g) || []).length;
+        if (/^<\//.test(match[0])) {
+          if (!stack.length)
             onError({
-              lineNumber: open.lineNumber,
-              detail:
-                '<details> 内に <summary> がありません。折りたたみの見出しを追加してください',
+              lineNumber,
+              detail: '対応する <details> がない </details> が見つかりました',
             });
-          }
-        }
+          else stack.pop();
+        } else stack.push(lineNumber);
       }
     }
-
-    // 閉じられていない <details> を報告
-    for (const open of detailsStack) {
+    for (const lineNumber of stack)
       onError({
-        lineNumber: open.lineNumber,
+        lineNumber,
         detail: '<details> が閉じられていません。</details> で閉じてください',
       });
-    }
   },
 };

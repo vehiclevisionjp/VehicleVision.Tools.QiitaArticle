@@ -1,11 +1,20 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import MarkdownIt from 'markdown-it';
 import { activate } from '../extension';
+import * as path from 'path';
+import { workspace } from '../../test/vscodeStub';
+import { ROOT } from '../../test/qiitaFixture';
 
 let md: MarkdownIt;
 
 beforeEach(() => {
+  workspace.workspaceFolders = [{ uri: { fsPath: ROOT }, name: 'articles' }];
   md = activate().extendMarkdownIt(new MarkdownIt());
+  const render = md.render.bind(md);
+  md.render = (
+    source,
+    env = { currentDocument: path.join(ROOT, 'public/a.md') },
+  ) => render(source, env);
 });
 
 // ─── noteBlockPlugin ─────────────────────────────────────────────────────────

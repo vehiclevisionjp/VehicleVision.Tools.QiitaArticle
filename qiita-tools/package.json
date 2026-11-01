@@ -1,14 +1,21 @@
 {
   "version": "0.0.0",
   "license": "AGPL-3.0-only",
+  "engines": {
+    "node": ">=22.22.1"
+  },
   "scripts": {
+    "test": "node --test test/*.test.cjs",
     "lint": "markdownlint-cli2 \"public/**/*.md\"",
     "lint:fix": "markdownlint-cli2 --fix \"public/**/*.md\"",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
   "devDependencies": {
-    "markdownlint-cli2": "^0.21.0",
+    "@qiita/qiita-cli": "1.12.0",
+    "gray-matter": "^4.0.3",
+    "markdown-it": "^14.3.3",
+    "markdownlint-cli2": "^0.24.0",
     "prettier": "^3.9.9"
   }
 }

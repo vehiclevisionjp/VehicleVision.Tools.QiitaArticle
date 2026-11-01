@@ -30,7 +30,7 @@ jobs:
           node-version: '24'
 
       - name: Install qiita-cli
-        run: npm install -g @qiita/qiita-cli@v1.8.0
+        run: npm install -g @qiita/qiita-cli@1.12.0
 
       - name: Publish articles
         env:

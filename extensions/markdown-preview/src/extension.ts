@@ -1,6 +1,6 @@
 import type MarkdownIt from 'markdown-it';
 import * as vscode from 'vscode';
-import * as fs from 'fs';
+import { isQiitaRoot } from './qiitaProject';
 import * as path from 'path';
 
 /**
@@ -18,17 +18,19 @@ import * as path from 'path';
  * - タスクリスト / 絵文字ショートコード (:smile:)
  * - 埋め込みコンテンツ (YouTube, Twitter/X, CodePen, Gist, GitHub 等)
  *
- * マルチルートワークスペースでは、Qiita 記事フォルダ（qiita.config.json を含む、
- * または public/ 配下）のドキュメントにのみ適用し、他フォルダの Markdown には影響しない。
+ * 各ワークスペースフォルダを個別に判定し、Qiita プロジェクトの public/ 配下のみ適用する。
  */
 export function activate() {
   return {
     extendMarkdownIt(md: MarkdownIt) {
-      // VS Code 側で設定された改行の扱い（Qiita 以外のドキュメントではこれに戻す）
-      const originalBreaks = !!md.options.breaks;
-
       // レンダリングごとに対象ドキュメントかを判定する
-      qiitaGatePlugin(md, originalBreaks);
+      qiitaGatePlugin(md);
+      // VS Code can cache tokens parsed without currentDocument, then supply
+      // the document only to renderer.render. Keep source for that render path.
+      const sources = new WeakMap<MarkdownIt.Token[], string>();
+      md.core.ruler.push('qiita_source', (state) => {
+        sources.set(state.tokens, state.src);
+      });
 
       // :::note ブロック
       noteBlockPlugin(md);
@@ -55,6 +57,25 @@ export function activate() {
       // 埋め込みコンテンツ
       embedPlugin(md);
 
+      const render = md.renderer.render.bind(md.renderer);
+      md.renderer.render = (tokens, options, env) => {
+        env ??= {};
+        const enabled = isQiitaDocument(env.currentDocument);
+        const source = sources.get(tokens);
+        const inline = tokens.length === 1 && tokens[0].type === 'inline';
+        if (env.qiitaEnabled !== enabled && source !== undefined) {
+          tokens = inline ? md.parseInline(source, env) : md.parse(source, env);
+        }
+        env.qiitaEnabled = enabled;
+        const html = render(
+          tokens,
+          { ...options, breaks: enabled || options.breaks },
+          env,
+        );
+        return isQiita(env) && !inline
+          ? `<div class="qiita-markdown">\n${html}</div>\n`
+          : html;
+      };
       return md;
     },
   };
@@ -71,9 +92,8 @@ function normalizePath(p: string): string {
 
 /**
  * ドキュメントが Qiita 記事かどうか。
- * - いずれかのワークスペースフォルダの public/ 配下
- * - qiita.config.json を持つワークスペースフォルダ配下
- * ドキュメント不明（env に currentDocument なし）の場合は対象とみなす。
+ * 設定ファイルまたは CLI 依存宣言のある各フォルダの public/ 配下に限る。
+ * ドキュメント不明の場合は適用しない。
  */
 function isQiitaDocument(currentDocument: unknown): boolean {
   let fsPath: string | undefined;
@@ -86,36 +106,35 @@ function isQiitaDocument(currentDocument: unknown): boolean {
     fsPath = (currentDocument as vscode.Uri).fsPath;
   }
   if (!fsPath) {
-    return true;
+    return false;
   }
 
   const doc = normalizePath(fsPath);
-  for (const folder of vscode.workspace.workspaceFolders ?? []) {
+  const folders = [...(vscode.workspace.workspaceFolders ?? [])].sort(
+    (a, b) => b.uri.fsPath.length - a.uri.fsPath.length,
+  );
+  for (const folder of folders) {
     const root = normalizePath(folder.uri.fsPath);
     if (doc !== root && !doc.startsWith(root + path.sep)) {
       continue;
     }
-    if (doc.startsWith(path.join(root, 'public') + path.sep)) {
-      return true;
-    }
-    if (fs.existsSync(path.join(folder.uri.fsPath, 'qiita.config.json'))) {
-      return true;
-    }
+    return (
+      doc.startsWith(path.join(root, 'public') + path.sep) &&
+      isQiitaRoot(folder.uri.fsPath)
+    );
   }
   return false;
 }
 
-function qiitaGatePlugin(md: MarkdownIt, originalBreaks: boolean) {
+function qiitaGatePlugin(md: MarkdownIt) {
   md.core.ruler.before('normalize', 'qiita_gate', (state) => {
     const enabled = isQiitaDocument(state.env?.currentDocument);
     state.env.qiitaEnabled = enabled;
-    // Qiita は改行をそのまま <br> に変換する
-    state.md.options.breaks = enabled ? true : originalBreaks;
   });
 }
 
 function isQiita(env: any): boolean {
-  return !!env && env.qiitaEnabled !== false;
+  return env?.qiitaEnabled === true;
 }
 
 // =====================================================================
@@ -141,7 +160,7 @@ function noteBlockPlugin(md: MarkdownIt) {
       const lineText = state.src.slice(pos, max).trim();
 
       // :::note [info|warn|alert]
-      const openMatch = lineText.match(/^:::note\s*(info|warn|alert)?$/);
+      const openMatch = lineText.match(/^:::note(?:\s+(\S+))?(?:\s+.*)?$/);
       if (!openMatch) return false;
 
       // 閉じ ::: を探す（コードフェンス内の ::: は無視）
@@ -178,7 +197,9 @@ function noteBlockPlugin(md: MarkdownIt) {
       if (!found) return false;
       if (silent) return true;
 
-      const subtype = openMatch[1] || 'info';
+      const subtype = ['info', 'warn', 'alert'].includes(openMatch[1])
+        ? openMatch[1]
+        : 'info';
       const iconClass =
         subtype === 'warn'
           ? 'qiita-note-icon-warn'
@@ -253,18 +274,26 @@ function inlineMathPlugin(md: MarkdownIt) {
   md.inline.ruler.before('text', 'qiita_math_inline', (state, silent) => {
     const src = state.src;
     const pos = state.pos;
-    if (
-      src.charCodeAt(pos) !== 0x24 /* $ */ ||
-      src.charCodeAt(pos + 1) !== 0x60 /* ` */
-    ) {
+    if (src[pos] !== '$' || src[pos - 1] === '$' || src[pos + 1] !== '`') {
       return false;
     }
     if (!isQiita(state.env)) return false;
 
-    const end = src.indexOf('`$', pos + 2);
-    if (end < 0 || end >= state.posMax) return false;
+    const marker = src.slice(pos + 1).match(/^`+/)![0];
+    let end = pos + 1 + marker.length;
+    while ((end = src.indexOf(marker, end)) >= 0 && end < state.posMax) {
+      if (src[end - 1] !== '`' && src[end + marker.length] !== '`') break;
+      end += marker.length;
+    }
+    if (
+      end < 0 ||
+      end + marker.length >= state.posMax ||
+      src[end + marker.length] !== '$' ||
+      src[end + marker.length + 1] === '$'
+    )
+      return false;
 
-    const content = src.slice(pos + 2, end);
+    const content = src.slice(pos + 1 + marker.length, end).replace(/\n/g, ' ');
     if (!content.trim()) return false;
 
     if (!silent) {
@@ -272,7 +301,7 @@ function inlineMathPlugin(md: MarkdownIt) {
       token.markup = '$';
       token.content = content;
     }
-    state.pos = end + 2;
+    state.pos = end + marker.length + 1;
     return true;
   });
 
@@ -313,12 +342,35 @@ function codeFilenamePlugin(md: MarkdownIt) {
 
     // lang:filename 形式をチェック
     const colonIndex = info.indexOf(':');
-    const lang = colonIndex > 0 ? info.substring(0, colonIndex) : info;
-    const filename = colonIndex > 0 ? info.substring(colonIndex + 1) : '';
+    const filenameOnly = colonIndex < 0 && info.includes('.');
+    const languageAliases: Record<string, string> = {
+      el: 'common-lisp',
+      hack: 'php',
+      zsh: 'bash',
+    };
+    const rawLang =
+      colonIndex >= 0
+        ? info.substring(0, colonIndex)
+        : filenameOnly
+          ? ''
+          : info;
+    const lang = languageAliases[rawLang] || rawLang;
+    const filename =
+      colonIndex >= 0
+        ? info.substring(colonIndex + 1)
+        : filenameOnly
+          ? info
+          : '';
     const isDiff = /^diff_/.test(lang);
 
     if (!filename && !isDiff) {
-      return renderDefault(tokens, idx, options, env, self);
+      const originalInfo = token.info;
+      token.info = lang;
+      try {
+        return renderDefault(tokens, idx, options, env, self);
+      } finally {
+        token.info = originalInfo;
+      }
     }
 
     let rendered: string;
@@ -536,6 +588,7 @@ function footnotePlugin(md: MarkdownIt) {
       const num = i + 1;
       // 脚注本文の中の脚注参照は再帰させない（footnotes を空にした別 env で描画）
       const renderedContent = md.renderInline(footnotes[label] || label, {
+        currentDocument: state.env.currentDocument,
         qiitaEnabled: true,
         footnotes: {},
       });

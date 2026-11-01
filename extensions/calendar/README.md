@@ -17,7 +17,7 @@ Qiita 記事の投稿スケジュールをカレンダー形式で管理する V
 
 ### 自動表示（デフォルト）
 
-ワークスペースに `qiita.config.json` または `public/` ディレクトリが存在する場合、ワークスペースを開いた時点で自動的にカレンダーが表示されます。
+各ワークスペースフォルダに `qiita.config.json` がある、または `package.json` の `dependencies` / `devDependencies` に `@qiita/qiita-cli` が宣言されている場合に自動表示します。マルチルートでもフォルダごとに判定し、`public/` の存在だけでは表示しません。
 
 ### 手動表示
 

@@ -5,8 +5,8 @@ import * as os from 'os';
 import * as path from 'path';
 import { workspace } from './vscodeStub';
 import { activate } from '../src/extension';
+import { ROOT } from './qiitaFixture';
 
-const ROOT = path.resolve('/ws/articles');
 const doc = (rel: string) => path.join(ROOT, rel);
 
 function render(
@@ -22,6 +22,49 @@ beforeEach(() => {
 });
 
 describe('対象ドキュメントの判定（マルチルート）', () => {
+  it('VS Code の文書不明で解析→別 env で描画する経路にも対応する', () => {
+    const md = activate().extendMarkdownIt(new MarkdownIt());
+    const tokens = md.parse('one\ntwo\n\n:::note info\nx\n:::', {});
+    const env = { currentDocument: { fsPath: doc('public/a.md') } };
+    const article = md.renderer.render(
+      tokens,
+      { ...md.options, breaks: false },
+      env,
+    );
+    expect(article).toContain('qiita-note-info');
+    expect(article).toContain('<br>');
+    const normal = md.renderer.render(tokens, md.options, {
+      currentDocument: doc('README.md'),
+    });
+    expect(normal).not.toContain('qiita-note-info');
+    expect(normal).not.toContain('qiita-markdown');
+    expect(normal).not.toContain('<br>');
+  });
+
+  it('通常の Markdown の改行設定を維持する', () => {
+    const md = activate().extendMarkdownIt(new MarkdownIt({ breaks: true }));
+    expect(md.render('a\nb', { currentDocument: doc('README.md') })).toContain(
+      '<br>',
+    );
+  });
+
+  it('対象外文書は標準 Markdown-It と同じ HTML を返す', () => {
+    const source =
+      '# Heading\n\nfirst\nsecond\n\n:::note info\nx\n:::\n\n`#fff`\n\n```js:a.js\nlet a;\n```';
+    const standard = new MarkdownIt({ html: true }).render(source);
+    expect(render(source, doc('README.md'))).toBe(standard);
+  });
+
+  it('入れ子の別ワークスペースを親の Qiita public/ と誤認しない', () => {
+    const nested = doc('public/website');
+    workspace.workspaceFolders = [
+      { uri: { fsPath: ROOT }, name: 'articles' },
+      { uri: { fsPath: nested }, name: 'website' },
+    ];
+    expect(
+      render(':::note\nx\n:::', path.join(nested, 'public/a.md')),
+    ).not.toContain('qiita-note-info');
+  });
   it('public/ 配下は Qiita 構文を適用し、改行を <br> にする', () => {
     const html = render('a\nb\n\n:::note info\nx\n:::');
     expect(html).toContain('<br>');
@@ -50,25 +93,59 @@ describe('対象ドキュメントの判定（マルチルート）', () => {
     expect(q(doc('public/a.md'))).toContain('<br>');
   });
 
-  it('qiita.config.json のあるフォルダは public/ 外でも対象', () => {
+  it('qiita.config.json があっても public/ 外には適用しない', () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'qiita-preview-'));
     try {
       workspace.workspaceFolders = [{ uri: { fsPath: tmp }, name: 'tmp' }];
       expect(render('a\nb', path.join(tmp, 'docs.md'))).not.toContain('<br>');
       fs.writeFileSync(path.join(tmp, 'qiita.config.json'), '{}');
-      expect(render('a\nb', path.join(tmp, 'docs.md'))).toContain('<br>');
+      expect(render('a\nb', path.join(tmp, 'docs.md'))).not.toContain('<br>');
+      expect(render('a\nb', path.join(tmp, 'public/a.md'))).toContain('<br>');
     } finally {
       fs.rmSync(tmp, { recursive: true, force: true });
     }
   });
 
-  it('ドキュメントが不明（currentDocument なし）なら対象', () => {
+  it('ドキュメントが不明なら適用しない', () => {
     const md = activate().extendMarkdownIt(new MarkdownIt());
-    expect(md.render('a\nb', {})).toContain('<br>');
+    expect(md.render('a\nb', {})).not.toContain('<br>');
+    expect(md.render('# title', {})).not.toContain('qiita-markdown');
+  });
+
+  it('CLI 依存宣言のあるフォルダと通常の public/ を区別する', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'qiita-gate-'));
+    try {
+      workspace.workspaceFolders = [
+        { uri: { fsPath: tmp }, name: 'cli' },
+        { uri: { fsPath: ROOT }, name: 'articles' },
+      ];
+      const article = path.join(tmp, 'public/a.md');
+      expect(render('a\nb', article)).not.toContain('qiita-markdown');
+      fs.writeFileSync(
+        path.join(tmp, 'package.json'),
+        JSON.stringify({ devDependencies: { '@qiita/qiita-cli': '1.12.0' } }),
+      );
+      expect(render('a\nb', article)).toContain('qiita-markdown');
+      expect(render('a\nb', path.join(tmp, 'README.md'))).not.toContain(
+        'qiita-markdown',
+      );
+      expect(render('a\nb', path.join(tmp, 'public-other/a.md'))).not.toContain(
+        'qiita-markdown',
+      );
+      expect(render('a\nb', doc('public/a.md'))).toContain('qiita-markdown');
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
   });
 });
 
 describe(':::note', () => {
+  it('未知の種別は info、3語目以降は無視する（上流互換）', () => {
+    expect(render(':::note unknown ignored\nx\n:::')).toContain(
+      'qiita-note-info',
+    );
+    expect(render(':::note warn ignored\nx\n:::')).toContain('qiita-note-warn');
+  });
   it.each(['info', 'warn', 'alert'])('%s を描画する', (type) => {
     const html = render(`:::note ${type}\n本文\n:::`);
     expect(html).toContain(`qiita-note-${type}`);
@@ -93,6 +170,13 @@ describe(':::note', () => {
 });
 
 describe('コードブロック', () => {
+  it('ファイル名のみ・言語省略・コロンを含むファイル名に対応する', () => {
+    for (const info of ['example.rb', ':example.rb', 'ruby:example:part.rb']) {
+      expect(render('```' + info + '\nputs 1\n```')).toContain(
+        'qiita-code-filename',
+      );
+    }
+  });
   it('lang:filename でファイル名ヘッダーを付け、info を壊さない', () => {
     const md = activate().extendMarkdownIt(new MarkdownIt());
     const env = { currentDocument: doc('public/a.md') };
@@ -139,6 +223,10 @@ describe('インラインカラー', () => {
 });
 
 describe('数式', () => {
+  it('複数バッククォートを使う旧形式と二重ドルの除外に対応する', () => {
+    expect(render('$``a`b``$')).toContain('qiita-math-inline');
+    expect(render('$$`x`$$')).not.toContain('qiita-math-inline');
+  });
   it('```math を math_block にする（フォールバック描画）', () => {
     expect(render('```math\ne^{i\\pi}+1=0\n```')).toContain('qiita-math-block');
   });
@@ -155,6 +243,11 @@ describe('数式', () => {
 });
 
 describe('脚注', () => {
+  it('脚注内でも対象文書を引き継ぎ、本文の改行処理を維持する', () => {
+    const html = render('one\ntwo[^a]\n\n[^a]: color `#fff`');
+    expect(html).toContain('<br>');
+    expect(html).toContain('qiita-inline-color');
+  });
   it('参照順に番号を振り、定義順には依存しない', () => {
     const html = render('A[^b] B[^a]\n\n[^a]: first\n[^b]: second');
     expect(html.indexOf('href="#fn-1"')).toBeLessThan(
