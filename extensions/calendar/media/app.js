@@ -119,9 +119,49 @@ async function init() {
     fetchArticles(),
     fetchHolidaysForCalendar(),
     fetchCurrentBranch(),
+    loadProjects(),
   ]);
   render();
   document.body.classList.add('ready');
+}
+
+// === 記事フォルダ（public）の切り替え ===
+async function loadProjects() {
+  const select = document.getElementById('projectSelect');
+  if (!select) return;
+  try {
+    const data = await apiRequest('getProjects');
+    if (data.projects.length < 2) {
+      select.style.display = 'none';
+      return;
+    }
+    select.innerHTML = data.projects
+      .map(function (p) {
+        return (
+          '<option value="' +
+          escapeHtml(p.path) +
+          '"' +
+          (p.path === data.current ? ' selected' : '') +
+          '>' +
+          escapeHtml(p.name) +
+          '</option>'
+        );
+      })
+      .join('');
+    select.style.display = '';
+  } catch {
+    select.style.display = 'none';
+  }
+}
+
+async function switchProject(projectPath) {
+  try {
+    await apiRequest('switchProject', { path: projectPath });
+  } catch (e) {
+    // 失敗時は現在の選択に戻す
+  }
+  await loadProjects();
+  await reloadCalendar();
 }
 
 // === リロード ===

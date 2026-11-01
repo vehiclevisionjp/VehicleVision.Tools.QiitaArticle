@@ -5,12 +5,11 @@ import { ArticleParser, ArticleInfo, UNDATED_PREFIX } from './articleParser';
 import { DEFAULT_HOLIDAY_CALENDAR_ID, HolidayService } from './holidayService';
 import { GitService } from './gitService';
 import { removeField, setField } from './frontMatter';
-import { isQiitaRoot } from './qiitaProject';
+import { findQiitaRoots } from './qiitaProject';
 
-/** 各フォルダの設定ファイルまたは CLI 依存宣言から判定する。 */
+/** 設定ファイルまたは CLI 依存宣言のある記事フォルダを持つか（子フォルダも含む）。 */
 function isQiitaFolder(folder: vscode.WorkspaceFolder): boolean {
-  const root = folder.uri.fsPath;
-  return isQiitaRoot(root);
+  return findQiitaRoots(folder.uri.fsPath).length > 0;
 }
 
 export class CalendarPanel {
@@ -21,11 +20,16 @@ export class CalendarPanel {
   private readonly _extensionUri: vscode.Uri;
   private _disposables: vscode.Disposable[] = [];
   private _disposed = false;
-  private _articleParser: ArticleParser;
+  private _articleParser!: ArticleParser;
   private _holidayService: HolidayService;
-  private _gitService: GitService;
-  private _publicDir: string;
-  private _workspaceRoot: string;
+  private _gitService!: GitService;
+  private _publicDir!: string;
+  private _workspaceRoot!: string;
+  /** ワークスペースフォルダ配下の記事フォルダ候補（複数ある場合は切り替え可能） */
+  private readonly _roots: string[];
+  private readonly _folder: vscode.WorkspaceFolder;
+  private _projectDisposables: vscode.Disposable[] = [];
+  private _debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
   private static key(root: string): string {
     return process.platform === 'win32' ? root.toLowerCase() : root;
@@ -127,19 +131,19 @@ export class CalendarPanel {
     folder: vscode.WorkspaceFolder,
     title: string,
   ) {
-    const workspaceRoot = folder.uri.fsPath;
+    this._folder = folder;
+    this._roots = findQiitaRoots(folder.uri.fsPath);
     this._panel = panel;
     this._extensionUri = extensionUri;
-    this._workspaceRoot = workspaceRoot;
-    this._publicDir = path.join(workspaceRoot, 'public');
-
-    this._articleParser = new ArticleParser(this._publicDir);
     this._holidayService = new HolidayService(() =>
       vscode.workspace
-        .getConfiguration('articleCalendar', folder.uri)
+        .getConfiguration(
+          'articleCalendar',
+          vscode.Uri.file(this._workspaceRoot),
+        )
         .get<string>('holidayCalendarId', DEFAULT_HOLIDAY_CALENDAR_ID),
     );
-    this._gitService = new GitService(workspaceRoot);
+    this._useProject(this._roots[0]);
 
     this._panel.webview.html = this._getHtmlForWebview(title);
 
@@ -148,51 +152,6 @@ export class CalendarPanel {
       null,
       this._disposables,
     );
-
-    // public/ 配下のファイル変更を監視して自動リロード通知
-    // （このパネルのワークスペースフォルダに限定する）
-    let debounceTimer: ReturnType<typeof setTimeout> | undefined;
-    const notify = (delay: number) => {
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
-      }
-      debounceTimer = setTimeout(() => {
-        if (!this._disposed) {
-          this._panel.webview.postMessage({ type: 'fileChanged' });
-        }
-      }, delay);
-    };
-    this._disposables.push({
-      dispose: () => {
-        if (debounceTimer) {
-          clearTimeout(debounceTimer);
-        }
-      },
-    });
-
-    const watcher = vscode.workspace.createFileSystemWatcher(
-      new vscode.RelativePattern(folder, 'public/**/*.md'),
-    );
-    watcher.onDidChange(() => notify(500));
-    watcher.onDidCreate(() => notify(500));
-    watcher.onDidDelete(() => notify(500));
-    this._disposables.push(watcher);
-
-    // HEAD の変更を監視してブランチ切替を検知（worktree / サブディレクトリ / submodule 対応）
-    this._gitService.getHeadPath().then((headPath) => {
-      if (!headPath || this._disposed) {
-        return;
-      }
-      const gitHeadWatcher = vscode.workspace.createFileSystemWatcher(
-        new vscode.RelativePattern(
-          vscode.Uri.file(path.dirname(headPath)),
-          'HEAD',
-        ),
-      );
-      gitHeadWatcher.onDidChange(() => notify(300));
-      gitHeadWatcher.onDidCreate(() => notify(300));
-      this._disposables.push(gitHeadWatcher);
-    });
 
     // 設定変更（祝日の取得元・表示テーマ）を反映する
     this._disposables.push(
@@ -221,12 +180,90 @@ export class CalendarPanel {
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
   }
 
+  // === 記事フォルダの切り替え ===
+
+  private _notify(delay: number) {
+    if (this._debounceTimer) {
+      clearTimeout(this._debounceTimer);
+    }
+    this._debounceTimer = setTimeout(() => {
+      if (!this._disposed) {
+        this._panel.webview.postMessage({ type: 'fileChanged' });
+      }
+    }, delay);
+  }
+
+  private _disposeProject() {
+    if (this._debounceTimer) {
+      clearTimeout(this._debounceTimer);
+      this._debounceTimer = undefined;
+    }
+    for (const d of this._projectDisposables.splice(0)) {
+      d.dispose();
+    }
+  }
+
+  /** 対象の記事フォルダを設定し、パーサ・Git・監視を作り直す */
+  private _useProject(root: string) {
+    this._disposeProject();
+    this._workspaceRoot = root;
+    this._publicDir = path.join(root, 'public');
+    this._articleParser = new ArticleParser(this._publicDir);
+    this._gitService = new GitService(root);
+
+    // public/ 配下のファイル変更を監視して自動リロード通知
+    const watcher = vscode.workspace.createFileSystemWatcher(
+      new vscode.RelativePattern(vscode.Uri.file(root), 'public/**/*.md'),
+    );
+    watcher.onDidChange(() => this._notify(500));
+    watcher.onDidCreate(() => this._notify(500));
+    watcher.onDidDelete(() => this._notify(500));
+    this._projectDisposables.push(watcher);
+
+    // HEAD の変更を監視してブランチ切替を検知（worktree / サブディレクトリ / submodule 対応）
+    const gitService = this._gitService;
+    gitService.getHeadPath().then((headPath) => {
+      if (!headPath || this._disposed || gitService !== this._gitService) {
+        return;
+      }
+      const gitHeadWatcher = vscode.workspace.createFileSystemWatcher(
+        new vscode.RelativePattern(
+          vscode.Uri.file(path.dirname(headPath)),
+          'HEAD',
+        ),
+      );
+      gitHeadWatcher.onDidChange(() => this._notify(300));
+      gitHeadWatcher.onDidCreate(() => this._notify(300));
+      this._projectDisposables.push(gitHeadWatcher);
+    });
+  }
+
+  private _projectList() {
+    return {
+      projects: this._roots.map((r) => ({
+        path: r,
+        name: path.relative(this._folder.uri.fsPath, r) || path.basename(r),
+      })),
+      current: this._workspaceRoot,
+    };
+  }
+
+  private _switchProject(target: unknown) {
+    const root = this._roots.find((r) => this._samePath(r, String(target)));
+    if (!root) {
+      return { success: false, error: '記事フォルダが見つかりません' };
+    }
+    this._useProject(root);
+    return { success: true };
+  }
+
   public dispose() {
     if (this._disposed) {
       return;
     }
     this._disposed = true;
-    CalendarPanel.panels.delete(CalendarPanel.key(this._workspaceRoot));
+    CalendarPanel.panels.delete(CalendarPanel.key(this._folder.uri.fsPath));
+    this._disposeProject();
     this._panel.dispose();
     while (this._disposables.length) {
       const d = this._disposables.pop();
@@ -248,6 +285,14 @@ export class CalendarPanel {
       let data: any;
 
       switch (command) {
+        case 'getProjects':
+          data = this._projectList();
+          break;
+
+        case 'switchProject':
+          data = this._switchProject(message.path);
+          break;
+
         case 'getArticles':
           data = this._articleParser.parseAll();
           break;
@@ -769,6 +814,7 @@ export class CalendarPanel {
     <div class="header">
       <h1><span>Qiita</span> 記事カレンダー</h1>
       <div class="header-actions">
+        <select class="project-select" id="projectSelect" style="display:none" onchange="switchProject(this.value)" title="記事フォルダを切り替え"></select>
         <button class="btn-reload" onclick="reloadCalendar()" title="データを再読み込み"><i class="codicon codicon-refresh"></i></button>
         <button class="btn-upload" onclick="openExternalUrl('https://qiita.com/settings/uploading_images')" title="Qiita で画像をアップロード（下書きエディタを開く）"><i class="codicon codicon-cloud-upload"></i> 画像UP</button>
         <button class="btn-new-article" onclick="openCreateModal()" title="新規記事を作成"><i class="codicon codicon-add"></i> 新規記事</button>
