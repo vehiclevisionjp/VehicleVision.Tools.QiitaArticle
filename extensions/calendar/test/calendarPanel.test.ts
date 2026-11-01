@@ -325,9 +325,9 @@ describe('CalendarPanel: 記事操作', () => {
     expect(fs.readFileSync(moved, 'utf-8')).toContain(
       'scheduled_publish: "2099-05-06"',
     );
-    expect(fs.existsSync(path.join(root, 'public/2099/01/20990101-move.md'))).toBe(
-      false,
-    );
+    expect(
+      fs.existsSync(path.join(root, 'public/2099/01/20990101-move.md')),
+    ).toBe(false);
 
     const cases: Array<[object, string]> = [
       [{ slug: '20990102-pub', newDate: '2099-05-06' }, '投稿済み'],
@@ -397,7 +397,9 @@ describe('CalendarPanel: 記事操作', () => {
     article(root, '99999999-clash.md');
     start();
 
-    const ok = (await request(panel, 'removeArticleDate', { slug: '20990101-undate' })).data;
+    const ok = (
+      await request(panel, 'removeArticleDate', { slug: '20990101-undate' })
+    ).data;
     expect(ok).toMatchObject({ success: true, newSlug: '99999999-undate' });
     const content = fs.readFileSync(
       path.join(root, 'public/99999999-undate.md'),
@@ -425,20 +427,26 @@ describe('CalendarPanel: 記事操作', () => {
     article(root, '2099/01/20990103-p.md', { id: 'x1' });
     start();
 
-    expect((await request(panel, 'togglePrivate', { slug: '20990101-t' })).data)
-      .toMatchObject({ success: true, newValue: true, label: '限定共有' });
+    expect(
+      (await request(panel, 'togglePrivate', { slug: '20990101-t' })).data,
+    ).toMatchObject({ success: true, newValue: true, label: '限定共有' });
     expect(fs.readFileSync(file, 'utf-8')).toContain('private: true');
-    expect((await request(panel, 'togglePrivate', { slug: '20990101-t' })).data)
-      .toMatchObject({ newValue: false, label: '公開' });
+    expect(
+      (await request(panel, 'togglePrivate', { slug: '20990101-t' })).data,
+    ).toMatchObject({ newValue: false, label: '公開' });
 
     expect(
-      (await request(panel, 'toggleIgnorePublish', { slug: '20990101-t' })).data,
+      (await request(panel, 'toggleIgnorePublish', { slug: '20990101-t' }))
+        .data,
     ).toMatchObject({ newStatus: 'Ready', label: '投稿準備完了' });
     expect(
-      (await request(panel, 'toggleIgnorePublish', { slug: '20990101-t' })).data,
+      (await request(panel, 'toggleIgnorePublish', { slug: '20990101-t' }))
+        .data,
     ).toMatchObject({ newStatus: 'Draft', label: '下書き' });
 
-    const sched = (await request(panel, 'toggleIgnorePublish', { slug: '20990102-s' })).data;
+    const sched = (
+      await request(panel, 'toggleIgnorePublish', { slug: '20990102-s' })
+    ).data;
     expect(sched.success).toBe(false);
     expect(sched.error).toContain('予約投稿');
     for (const command of ['togglePrivate', 'toggleIgnorePublish']) {
@@ -457,10 +465,12 @@ describe('CalendarPanel: 記事操作', () => {
     expect(state.openedDocuments).toEqual([file]);
 
     expect(
-      (await request(panel, 'openFile', { slug: 'none', path: 'README.md' })).data,
+      (await request(panel, 'openFile', { slug: 'none', path: 'README.md' }))
+        .data,
     ).toEqual({ success: true });
     for (const bad of ['../outside.md', undefined, '']) {
-      const r = (await request(panel, 'openFile', { slug: 'none', path: bad })).data;
+      const r = (await request(panel, 'openFile', { slug: 'none', path: bad }))
+        .data;
       expect(r.success, String(bad)).toBe(false);
     }
   });
@@ -468,10 +478,13 @@ describe('CalendarPanel: 記事操作', () => {
   it('openExternal は http(s) のみ許可する', async () => {
     start();
     expect(
-      (await request(panel, 'openExternal', { url: 'https://qiita.com/' })).data,
+      (await request(panel, 'openExternal', { url: 'https://qiita.com/' }))
+        .data,
     ).toEqual({ success: true });
     expect(state.openedExternal).toHaveLength(1);
-    const res = await request(panel, 'openExternal', { url: 'file:///etc/passwd' });
+    const res = await request(panel, 'openExternal', {
+      url: 'file:///etc/passwd',
+    });
     expect(res.error).toContain('http / https');
     expect(state.openedExternal).toHaveLength(1);
   });

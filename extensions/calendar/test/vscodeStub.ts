@@ -89,16 +89,13 @@ export function resetState() {
 
 export const workspace: {
   workspaceFolders:
-    | Array<{ uri: { fsPath: string }; name: string; index: number }>
-    | undefined;
+    Array<{ uri: { fsPath: string }; name: string; index: number }> | undefined;
   [key: string]: any;
 } = {
   workspaceFolders: undefined,
   getConfiguration: () => ({
     get: <T>(key: string, fallback: T): T =>
-      (key in state.configuration
-        ? state.configuration[key]
-        : fallback) as T,
+      (key in state.configuration ? state.configuration[key] : fallback) as T,
   }),
   onDidChangeConfiguration: () => new Disposable(),
   createFileSystemWatcher: (pattern: RelativePattern) => {

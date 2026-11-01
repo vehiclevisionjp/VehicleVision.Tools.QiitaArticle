@@ -43,7 +43,10 @@ afterEach(() => {
 
 describe('activate', () => {
   it('autoOpen が有効なら起動時にパネルを開き、コマンドを登録する', () => {
-    const context = { extensionUri: Uri.file('/ext'), subscriptions: [] } as any;
+    const context = {
+      extensionUri: Uri.file('/ext'),
+      subscriptions: [],
+    } as any;
     activate(context);
     expect(state.panels).toHaveLength(1);
     expect(context.subscriptions).toHaveLength(2);
@@ -54,7 +57,10 @@ describe('activate', () => {
 
   it('autoOpen が無効なら開かず、フォルダ削除でパネルを閉じる', async () => {
     state.configuration.autoOpen = false;
-    const context = { extensionUri: Uri.file('/ext'), subscriptions: [] } as any;
+    const context = {
+      extensionUri: Uri.file('/ext'),
+      subscriptions: [],
+    } as any;
     activate(context);
     expect(state.panels).toHaveLength(0);
 

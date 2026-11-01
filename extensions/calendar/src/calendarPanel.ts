@@ -31,7 +31,6 @@ export class CalendarPanel {
   private _projectDisposables: vscode.Disposable[] = [];
   private _debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
-
   private static key(root: string): string {
     return process.platform === 'win32' ? root.toLowerCase() : root;
   }
@@ -138,7 +137,10 @@ export class CalendarPanel {
     this._extensionUri = extensionUri;
     this._holidayService = new HolidayService(() =>
       vscode.workspace
-        .getConfiguration('articleCalendar', vscode.Uri.file(this._workspaceRoot))
+        .getConfiguration(
+          'articleCalendar',
+          vscode.Uri.file(this._workspaceRoot),
+        )
         .get<string>('holidayCalendarId', DEFAULT_HOLIDAY_CALENDAR_ID),
     );
     this._useProject(this._roots[0]);
